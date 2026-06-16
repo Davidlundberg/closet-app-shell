@@ -1,0 +1,2336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>David's Closet</title>
+<!-- PWA (Drop 4): installable app shell + iOS standalone polish -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="static/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="static/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Closet">
+<!-- Both metas track the app's manual theme toggle via JS (see applyThemeColor);
+     the media split covers first paint before that script runs. -->
+<meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#18181b" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-primary: #0d9488;
+  --color-primary-hover: #0f766e;
+  --color-primary-muted: rgba(13,148,136,0.12);
+  --color-secondary: #3f3f46;
+  --color-secondary-hover: #27272a;
+  --color-secondary-light: #71717a;
+  --color-secondary-muted: rgba(63,63,70,0.12);
+  --color-bg: #fafaf8;
+  --color-bg-subtle: #f4f3ef;
+  --color-card: #ffffff;
+  --color-text: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #a1a1aa;
+  --color-border: #e5e3de;
+  --color-border-hover: #d1cec7;
+  --color-success: #059669;
+  --color-danger: #dc2626;
+  --shadow-card: 0 2px 8px rgba(10,22,40,0.08), 0 1px 2px rgba(10,22,40,0.04);
+  --shadow-hover: 0 12px 40px rgba(10,22,40,0.12), 0 2px 6px rgba(10,22,40,0.06);
+  --shadow-modal: 0 24px 48px rgba(10,22,40,0.18), 0 4px 12px rgba(10,22,40,0.08);
+  --shadow-dropdown: 0 8px 24px rgba(10,22,40,0.12), 0 2px 6px rgba(10,22,40,0.04);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+}
+[data-theme="dark"] {
+  --color-primary: #14b8a6;
+  --color-primary-hover: #2dd4bf;
+  --color-primary-muted: rgba(20,184,166,0.15);
+  --color-secondary: #a1a1aa;
+  --color-secondary-hover: #d4d4d8;
+  --color-secondary-light: #71717a;
+  --color-secondary-muted: rgba(161,161,170,0.12);
+  --color-bg: #18181b;
+  --color-bg-subtle: #1f1f23;
+  --color-card: #27272a;
+  --color-text: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-border: #3f3f46;
+  --color-border-hover: #52525b;
+  --color-success: #34d399;
+  --color-danger: #f87171;
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-hover: 0 12px 40px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.3);
+  --shadow-modal: 0 24px 48px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.2);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-feature-settings: "cv01"; background: var(--color-bg); color: var(--color-text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+/* Safe-area insets keep the standalone PWA clear of the notch/home indicator;
+   env() resolves to 0px in normal browsers, so desktop layout is unchanged. */
+.app { max-width: 720px; margin: 0 auto; padding: calc(2rem + env(safe-area-inset-top, 0px)) calc(1.5rem + env(safe-area-inset-right, 0px)) calc(2rem + env(safe-area-inset-bottom, 0px)) calc(1.5rem + env(safe-area-inset-left, 0px)); }
+.app-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.app-header-actions { display: flex; gap: 6px; }
+h1 { font-family: var(--font-serif); font-size: 22px; font-weight: 400; letter-spacing: -0.02em; color: var(--color-secondary); }
+.icon-btn { background: none; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 5px 8px; cursor: pointer; font-size: 14px; line-height: 1; transition: all 120ms var(--ease); color: var(--color-text-muted); font-family: inherit; }
+.icon-btn:hover { border-color: var(--color-border-hover); color: var(--color-text-secondary); background: var(--color-bg-subtle); }
+.tabs { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border); }
+.tab { padding: 9px 18px; font-size: 13px; cursor: pointer; border: none; background: none; color: var(--color-text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 120ms var(--ease); letter-spacing: 0.02em; font-family: inherit; }
+.tab.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); font-weight: 500; }
+.tab:hover:not(.active) { color: var(--color-text-secondary); }
+.panel { display: none; }
+.panel.active { display: block; }
+
+@keyframes focus-glow { from { box-shadow: 0 0 0 0 rgba(13,148,136,0); } to { box-shadow: 0 0 0 4px var(--color-primary-muted); } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Inputs */
+.search-box { width: 100%; padding: 9px 12px; font-size: 14px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text); font-family: inherit; font-feature-settings: "cv01"; margin-bottom: 1rem; outline: none; transition: border-color 120ms var(--ease); }
+.search-box:focus { border-color: var(--color-primary); animation: focus-glow 200ms var(--ease) forwards; }
+
+/* Closet */
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 1rem; }
+.cat-card { background: var(--color-bg-subtle); border-radius: var(--radius-sm); padding: 11px 13px; cursor: pointer; border: 1px solid var(--color-border); transition: all 200ms var(--ease); }
+.cat-card:hover { border-color: var(--color-border-hover); background: var(--color-card); transform: translateY(-1px); box-shadow: var(--shadow-card); }
+.cat-card.selected { border-color: var(--color-primary); background: var(--color-card); box-shadow: 0 0 0 1px var(--color-primary); }
+.cat-name { font-family: var(--font-serif); font-size: 14px; font-weight: 400; color: var(--color-secondary); }
+.cat-count { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+.section-label { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-secondary-light); margin: 1.25rem 0 0.6rem; }
+
+/* Item rows — text-first, no thumbs, no color dots */
+.item-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--color-border); gap: 10px; }
+.item-row:last-child { border-bottom: none; }
+.item-name { font-size: 13px; color: var(--color-text); flex: 1; }
+.item-actions { display: flex; gap: 6px; align-items: center; }
+.season-badge { font-size: 11px; padding: 2px 8px; border-radius: var(--radius-pill); background: var(--color-bg-subtle); color: var(--color-text-muted); border: 1px solid var(--color-border); white-space: nowrap; }
+.action-btn { font-size: 11px; color: var(--color-text-muted); background: none; border: none; cursor: pointer; padding: 2px 4px; font-family: inherit; transition: color 120ms var(--ease); }
+.action-btn:hover { color: var(--color-text-secondary); }
+.action-btn.del:hover { color: var(--color-danger); }
+
+/* Add item bar */
+.add-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; }
+.add-btn { padding: 8px 14px; font-size: 13px; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 200ms var(--ease); }
+.add-btn:hover { background: var(--color-primary-hover); box-shadow: 0 0 0 3px var(--color-primary-muted); }
+
+/* Modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.modal { background: var(--color-card); border-radius: var(--radius-lg); padding: 1.5rem; width: 460px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-modal); }
+.modal h2 { font-family: var(--font-serif); font-size: 17px; font-weight: 400; margin-bottom: 1.25rem; color: var(--color-secondary); }
+.form-row { margin-bottom: 0.85rem; }
+.form-row label { font-size: 11px; color: var(--color-text-muted); letter-spacing: 0.05em; text-transform: uppercase; display: block; margin-bottom: 5px; }
+.form-row input, .form-row select, .form-row textarea { width: 100%; padding: 8px 10px; font-size: 13px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text); font-family: inherit; font-feature-settings: "cv01"; outline: none; transition: border-color 120ms var(--ease); }
+.form-row textarea { resize: vertical; line-height: 1.5; }
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--color-primary); animation: focus-glow 200ms var(--ease) forwards; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 1.25rem; justify-content: flex-end; }
+.btn-cancel { padding: 8px 14px; font-size: 13px; background: var(--color-bg-subtle); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; transition: all 120ms var(--ease); }
+.btn-cancel:hover { background: var(--color-border); }
+.btn-save { padding: 8px 14px; font-size: 13px; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; transition: all 200ms var(--ease); }
+.btn-save:hover { background: var(--color-primary-hover); box-shadow: 0 0 0 3px var(--color-primary-muted); }
+
+select { width: 100%; padding: 8px 10px; font-size: 13px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text); font-family: inherit; font-feature-settings: "cv01"; outline: none; transition: border-color 120ms var(--ease); }
+select:focus { border-color: var(--color-primary); }
+
+/* Button option groups */
+.btn-group { display: flex; flex-wrap: wrap; gap: 5px; }
+.btn-opt { padding: 5px 12px; font-size: 12px; border-radius: var(--radius-pill); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-family: inherit; font-feature-settings: "cv01"; transition: all 120ms var(--ease); white-space: nowrap; letter-spacing: 0.01em; }
+.btn-opt:hover { border-color: var(--color-border-hover); color: var(--color-text-secondary); background: var(--color-bg-subtle); }
+.btn-opt.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+/* Status bar */
+.status-bar { font-size: 11px; color: var(--color-text-muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); }
+.status-dot.error { background: var(--color-danger); }
+
+/* Ask tab */
+.ask-form { margin-bottom: 1.25rem; }
+.ask-input { width: 100%; padding: 10px 12px; font-size: 14px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text); font-family: inherit; font-feature-settings: "cv01"; outline: none; resize: none; line-height: 1.5; box-sizing: border-box; transition: border-color 120ms var(--ease); }
+.ask-input:focus { border-color: var(--color-primary); animation: focus-glow 200ms var(--ease) forwards; }
+.gen-btn { width: 100%; padding: 10px; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 200ms var(--ease); margin-top: 8px; letter-spacing: 0.02em; }
+.gen-btn:hover { background: var(--color-primary-hover); box-shadow: 0 0 0 3px var(--color-primary-muted); }
+.gen-btn:disabled { opacity: 0.6; cursor: wait; }
+.ask-state { font-size: 13px; color: var(--color-text-muted); padding: 1.5rem 0; text-align: center; }
+@keyframes askDots { 0%,20% { content: ''; } 40% { content: '.'; } 60% { content: '..'; } 80%,100% { content: '...'; } }
+.ask-thinking::after { content: ''; animation: askDots 1.2s steps(1) infinite; }
+
+/* Ask card — slot-structured */
+.ask-card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 10px; box-shadow: var(--shadow-card); animation: fadeInUp 200ms var(--ease) both; }
+.ask-card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; gap: 12px; }
+.ask-card-title { font-family: var(--font-serif); font-size: 17px; font-weight: 400; color: var(--color-secondary); }
+.ask-card-vibe { font-size: 11px; color: var(--color-text-muted); letter-spacing: 0.05em; text-transform: uppercase; text-align: right; }
+.ask-rationale { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; margin-bottom: 14px; padding: 10px 12px; background: var(--color-bg-subtle); border-radius: var(--radius-sm); border-left: 2px solid var(--color-secondary); }
+.slot-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.slot-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--color-border); }
+.slot-row:last-child { border-bottom: none; }
+.slot-label { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-text-muted); width: 72px; flex-shrink: 0; }
+.slot-body { flex: 1; min-width: 0; }
+.slot-item { font-size: 13px; color: var(--color-text); font-weight: 500; }
+.slot-reason { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; font-style: italic; }
+.slot-empty { font-size: 13px; color: var(--color-text-muted); font-style: italic; }
+.slot-swap { font-size: 11px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-family: inherit; transition: all 120ms var(--ease); white-space: nowrap; }
+.slot-swap:hover { border-color: var(--color-secondary-light); color: var(--color-secondary); background: var(--color-secondary-muted); }
+.slot-swap:disabled { opacity: 0.5; cursor: wait; }
+.slot-swap.swapping::after { content: '…'; }
+
+/* Manual slot picker (build-your-own) */
+.picker-panel { border: 1px solid var(--color-border-hover); border-radius: var(--radius-md); margin: 0 0 8px; background: var(--color-card); overflow: hidden; animation: fadeInUp 140ms var(--ease) both; }
+.picker-claude { display: flex; align-items: center; gap: 7px; padding: 9px 12px; font-size: 13px; font-weight: 500; color: var(--color-primary); cursor: pointer; }
+.picker-claude:hover { background: var(--color-secondary-muted); }
+.picker-claude.picker-thinking { opacity: 0.5; pointer-events: none; }
+.picker-wand { font-size: 12px; }
+.picker-list { max-height: 240px; overflow-y: auto; border-top: 1px solid var(--color-border); }
+.picker-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; font-size: 13px; color: var(--color-text); cursor: pointer; }
+.picker-item:hover { background: var(--color-bg-subtle); }
+.picker-item.selected { background: var(--color-secondary-muted); font-weight: 500; }
+.picker-check { color: var(--color-primary); flex-shrink: 0; }
+.picker-empty { padding: 10px 12px; font-size: 12px; color: var(--color-text-muted); font-style: italic; }
+.picker-toggle { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-top: 1px solid var(--color-border); font-size: 12px; color: var(--color-text-secondary); cursor: pointer; user-select: none; }
+.picker-switch { width: 32px; height: 17px; border-radius: 999px; background: var(--color-border); position: relative; flex-shrink: 0; transition: background 120ms; }
+.picker-switch.on { background: var(--color-primary); }
+.picker-knob { position: absolute; top: 1px; left: 1px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2); transition: left 120ms; }
+.picker-switch.on .picker-knob { left: 16px; }
+
+/* Card actions */
+.card-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border); }
+.card-action { font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-family: inherit; transition: all 120ms var(--ease); white-space: nowrap; }
+.card-action:hover { border-color: var(--color-secondary-light); color: var(--color-secondary); background: var(--color-secondary-muted); }
+.card-action.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.card-action:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Chat thread */
+.chat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.chat-header-title { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-secondary-light); }
+.chat-reset { font-size: 11px; padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text-muted); cursor: pointer; font-family: inherit; transition: all 120ms var(--ease); }
+.chat-reset:hover { border-color: var(--color-secondary-light); color: var(--color-secondary); background: var(--color-secondary-muted); }
+.chat-thread { display: flex; flex-direction: column; gap: 14px; margin-bottom: 1rem; }
+.chat-thread:empty { margin-bottom: 0; }
+.chat-turn { display: flex; flex-direction: column; gap: 10px; animation: fadeInUp 200ms var(--ease) both; }
+.chat-msg-user { align-self: flex-end; max-width: 85%; padding: 8px 12px; background: var(--color-primary); color: #fff; border-radius: var(--radius-md); font-size: 13px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+.chat-msg-assistant { align-self: flex-start; max-width: 95%; font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; padding: 0 2px; font-style: italic; }
+.card-group { display: flex; flex-direction: column; gap: 8px; }
+.card-group .ask-card { margin-bottom: 0; }
+.card-group .ask-card-index { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-secondary-light); margin-bottom: 6px; }
+
+/* Today tab */
+.today-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 1rem; animation: fadeInUp 200ms var(--ease) both; }
+.today-date { font-family: var(--font-serif); font-size: 28px; font-weight: 400; letter-spacing: -0.02em; color: var(--color-text); min-width: 0; }
+.day-toggle { display: flex; gap: 2px; padding: 3px; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-pill); flex-shrink: 0; }
+.day-opt { font-size: 12px; padding: 4px 13px; border-radius: var(--radius-pill); border: none; background: none; color: var(--color-text-muted); cursor: pointer; font-family: inherit; letter-spacing: 0.01em; transition: all 120ms var(--ease); white-space: nowrap; }
+.day-opt:hover:not(.active) { color: var(--color-text-secondary); }
+.day-opt.active { background: var(--color-card); color: var(--color-text); font-weight: 500; box-shadow: var(--shadow-card); }
+.weather-temp-lo { font-size: 16px; font-weight: 500; color: var(--color-text-muted); }
+.weather-strip { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-bottom: 1.25rem; box-shadow: var(--shadow-card); animation: fadeInUp 200ms var(--ease) both; min-height: 68px; }
+.weather-icon { color: var(--color-primary); display: flex; align-items: center; flex-shrink: 0; }
+.weather-icon svg { width: 30px; height: 30px; }
+.weather-temp { font-size: 25px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; color: var(--color-text); }
+.weather-feels { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+.weather-meta { margin-left: auto; text-align: right; }
+.weather-summary { font-size: 13px; color: var(--color-text-secondary); text-transform: capitalize; }
+.weather-hilo { font-size: 11px; color: var(--color-text-muted); margin-top: 3px; }
+.weather-unavailable { font-size: 13px; color: var(--color-text-muted); font-style: italic; }
+.chip-row { display: flex; gap: 6px; margin-bottom: 1.25rem; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chip-row::-webkit-scrollbar { display: none; }
+.chip-row .btn-opt { flex-shrink: 0; }
+
+/* Hero outfit card — Today's signature surface */
+.hero-card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-card); animation: fadeInUp 200ms var(--ease) both; }
+.hero-eyebrow { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-secondary-light); margin-bottom: 10px; }
+.hero-header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.hero-title { font-family: var(--font-serif); font-size: 23px; font-weight: 400; letter-spacing: -0.01em; color: var(--color-secondary); }
+.hero-vibe { font-size: 11px; color: var(--color-text-muted); letter-spacing: 0.05em; text-transform: uppercase; text-align: right; }
+.hero-reason { font-size: 13px; font-style: italic; color: var(--color-text-secondary); line-height: 1.6; margin: 12px 0 14px; padding: 10px 14px; background: var(--color-bg-subtle); border-left: 2px solid var(--color-primary); border-radius: var(--radius-sm); }
+.hero-card .slot-row { padding: 11px 0; }
+.hero-card .slot-item { font-size: 14px; }
+.hero-actions { display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-border); }
+.card-action.primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary); font-weight: 500; padding: 7px 16px; }
+.card-action.primary:hover:not(:disabled) { background: var(--color-primary-hover); border-color: var(--color-primary-hover); color: #fff; box-shadow: 0 0 0 3px var(--color-primary-muted); }
+.today-error { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px; }
+
+/* Hero skeleton */
+@keyframes skeletonPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.skeleton-line { height: 12px; border-radius: var(--radius-sm); background: var(--color-bg-subtle); animation: skeletonPulse 1.4s var(--ease) infinite; }
+.today-composing { font-size: 13px; color: var(--color-text-muted); text-align: center; padding: 4px 0 16px; }
+
+/* Insights tab */
+.stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.75rem; animation: fadeInUp 200ms var(--ease) both; }
+.stat { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px 14px 14px; box-shadow: var(--shadow-card); min-width: 0; }
+.stat-num { font-family: var(--font-serif); font-size: 34px; font-weight: 400; letter-spacing: -0.02em; line-height: 1; color: var(--color-text); }
+.stat-label { font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-text-muted); margin-top: 7px; line-height: 1.45; }
+.insights-section { margin-bottom: 1.75rem; animation: fadeInUp 200ms var(--ease) both; }
+.insights-section .section-label { margin-top: 0; }
+.mw-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.mw-row:last-child { border-bottom: none; }
+.mw-rank { font-family: var(--font-serif); font-size: 15px; color: var(--color-text-muted); width: 16px; flex-shrink: 0; text-align: center; }
+.mw-body { flex: 1; min-width: 0; }
+.mw-name { font-size: 13px; font-weight: 500; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-meta { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
+.mw-bar { height: 3px; border-radius: 2px; background: var(--color-bg-subtle); margin-top: 7px; overflow: hidden; }
+.mw-bar span { display: block; height: 100%; max-width: 100%; background: var(--color-primary); border-radius: 2px; }
+.mw-count { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.shadow-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--color-border); }
+.shadow-row:last-child { border-bottom: none; }
+.shadow-main { flex: 1; min-width: 0; }
+.shadow-name { font-size: 13px; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shadow-meta { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.style-this { flex-shrink: 0; }
+.cat-bar-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; }
+.cat-bar-label { width: 90px; flex-shrink: 0; font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--color-bg-subtle); overflow: hidden; }
+.cat-bar span { display: block; height: 100%; max-width: 100%; background: var(--color-primary); border-radius: 3px; opacity: 0.85; }
+.cat-bar-count { width: 42px; flex-shrink: 0; text-align: right; font-size: 11px; color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.insights-empty { text-align: center; padding: 3.5rem 1.5rem; animation: fadeInUp 200ms var(--ease) both; }
+.insights-empty-title { font-family: var(--font-serif); font-size: 22px; font-weight: 400; color: var(--color-secondary); letter-spacing: -0.01em; }
+.insights-empty-copy { font-size: 13px; color: var(--color-text-muted); line-height: 1.65; max-width: 400px; margin: 10px auto 0; }
+.insights-state { font-size: 13px; color: var(--color-text-muted); padding: 2rem 0; text-align: center; }
+
+/* Trips — entry row, banner, modal form/plan */
+.trip-banner { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 9px 14px; background: var(--color-primary-muted); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 12px; color: var(--color-text-secondary); animation: fadeInUp 200ms var(--ease) both; }
+.trip-banner-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trip-banner-dest { font-weight: 600; color: var(--color-text); }
+.trip-banner-view { font-size: 11px; padding: 4px 10px; border-radius: var(--radius-pill); border: 1px solid var(--color-border); background: var(--color-card); color: var(--color-text-secondary); cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 120ms var(--ease); }
+.trip-banner-view:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.trip-entry { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 12px; padding: 13px 16px; background: none; border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; font-family: var(--font-serif); font-size: 15px; letter-spacing: -0.01em; color: var(--color-secondary); text-align: left; transition: all 150ms var(--ease); animation: fadeInUp 200ms var(--ease) both; }
+.trip-entry:hover { border-color: var(--color-border-hover); background: var(--color-bg-subtle); }
+.trip-entry svg { width: 18px; height: 18px; color: var(--color-text-muted); flex-shrink: 0; }
+.trip-modal { width: 560px; }
+.trip-loading { font-size: 13px; color: var(--color-text-muted); text-align: center; padding: 2.5rem 0; }
+.trip-form-error { font-size: 12px; color: var(--color-danger); min-height: 16px; margin-top: 2px; }
+.trip-result-meta { font-size: 12px; color: var(--color-text-muted); margin: 0 0 12px; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.bag-chip { font-size: 11px; padding: 1px 9px; border-radius: var(--radius-pill); background: var(--color-bg-subtle); border: 1px solid var(--color-border); color: var(--color-text-secondary); white-space: nowrap; }
+.trip-seasonal-flag { font-style: italic; }
+.trip-forecast { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; scrollbar-width: none; }
+.trip-forecast::-webkit-scrollbar { display: none; }
+.trip-fc-cell { flex: 1; min-width: 58px; text-align: center; padding: 8px 4px; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.trip-fc-date { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); margin-bottom: 3px; white-space: nowrap; }
+.trip-fc-temp { font-size: 13px; font-weight: 600; color: var(--color-text); white-space: nowrap; }
+.trip-fc-temp span { font-weight: 400; color: var(--color-text-muted); font-size: 11px; }
+.trip-fc-precip { font-size: 10px; color: var(--color-primary); margin-top: 2px; min-height: 13px; }
+.trip-cap-group { margin-bottom: 10px; }
+.trip-cap-cat { font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 3px; }
+.trip-cap-item { font-size: 13px; color: var(--color-text); padding: 4px 0; border-bottom: 1px solid var(--color-border); }
+.trip-cap-item:last-child { border-bottom: none; }
+.trip-day { padding: 9px 0; border-bottom: 1px solid var(--color-border); }
+.trip-day:last-child { border-bottom: none; }
+.trip-day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.trip-day-label { font-size: 12px; font-weight: 600; color: var(--color-text); white-space: nowrap; }
+.trip-day-plan { font-size: 11px; color: var(--color-text-muted); font-style: italic; text-align: right; }
+.trip-day-slots { font-size: 12px; color: var(--color-text-secondary); margin-top: 3px; line-height: 1.5; }
+.trip-day-acc { color: var(--color-text-muted); }
+.trip-rewear { font-size: 12px; font-style: italic; color: var(--color-text-secondary); line-height: 1.55; margin-top: 12px; padding: 9px 12px; background: var(--color-bg-subtle); border-radius: var(--radius-sm); }
+.trip-extras { display: flex; flex-direction: column; gap: 2px; }
+.trip-extra { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-text); padding: 5px 0; cursor: pointer; }
+.trip-extra input { accent-color: var(--color-primary); width: 14px; height: 14px; flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .app { padding: 1.5rem 1rem; }
+  .today-head { flex-wrap: wrap; gap: 8px; }
+  .trip-day-head { flex-wrap: wrap; gap: 2px 10px; }
+  .trip-day-plan { text-align: left; }
+  .trip-fc-cell { min-width: 52px; }
+  .today-date { font-size: 24px; }
+  .weather-temp { font-size: 22px; }
+  .hero-title { font-size: 20px; }
+  .hero-header { flex-direction: column; gap: 2px; }
+  .hero-vibe { text-align: left; }
+  .hero-actions { flex-wrap: wrap; }
+  .stat-row { gap: 7px; }
+  .stat { padding: 12px 10px 11px; }
+  .stat-num { font-size: 24px; }
+  .stat-label { font-size: 9px; letter-spacing: 0.05em; }
+  .cat-bar-label { width: 76px; font-size: 11px; }
+  .tab { padding: 9px 13px; }
+}
+
+/* History strip */
+.history-section { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
+.history-title { font-size: 10px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-secondary-light); margin-bottom: 0.75rem; }
+.history-empty { font-size: 12px; color: var(--color-text-muted); padding: 0.5rem 0; }
+.history-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--color-border); font-size: 12px; }
+.history-row:last-child { border-bottom: none; }
+.history-row-main { flex: 1; min-width: 0; color: var(--color-text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-row-title { color: var(--color-text); font-weight: 500; }
+.history-row-date { color: var(--color-text-muted); font-size: 11px; white-space: nowrap; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="app">
+<div class="app-header">
+  <h1>David's Closet</h1>
+  <div class="app-header-actions">
+    <button class="icon-btn" onclick="openSettings()" title="Settings" id="settings-btn">⚙</button>
+    <button class="icon-btn" onclick="toggleTheme()" title="Toggle dark mode" id="theme-toggle">☾</button>
+  </div>
+</div>
+<div class="status-bar"><div class="status-dot" id="status-dot"></div><span id="status-text">Loading...</span></div>
+<div class="tabs">
+  <button class="tab active" onclick="showTab('today',this)">Today</button>
+  <button class="tab" onclick="showTab('ask',this)">Ask</button>
+  <button class="tab" onclick="showTab('insights',this)">Insights</button>
+  <button class="tab" onclick="showTab('closet',this)">Closet</button>
+</div>
+
+<!-- TODAY TAB -->
+<div id="tab-today" class="panel active">
+  <div class="today-head">
+    <div class="today-date" id="today-date"></div>
+    <div class="day-toggle" id="day-toggle">
+      <button type="button" class="day-opt active" data-day="today" onclick="selectDay('today')">Today</button>
+      <button type="button" class="day-opt" data-day="tomorrow" onclick="selectDay('tomorrow')">Tomorrow</button>
+    </div>
+  </div>
+  <div class="weather-strip" id="today-weather"><div class="weather-unavailable">Checking the sky…</div></div>
+  <div class="chip-row" id="occasion-chips">
+    <button type="button" class="btn-opt" data-occasion="Office" onclick="selectOccasion(this)">Office</button>
+    <button type="button" class="btn-opt" data-occasion="Dinner out" onclick="selectOccasion(this)">Dinner out</button>
+    <button type="button" class="btn-opt" data-occasion="Weekend" onclick="selectOccasion(this)">Weekend</button>
+    <button type="button" class="btn-opt" data-occasion="Date night" onclick="selectOccasion(this)">Date night</button>
+    <button type="button" class="btn-opt" data-occasion="Smart event" onclick="selectOccasion(this)">Smart event</button>
+  </div>
+  <div id="today-hero"></div>
+  <div id="trip-banner"></div>
+  <button type="button" class="trip-entry" id="trip-entry" onclick="openTripModal()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M9 8V6a3 3 0 0 1 3-3h0a3 3 0 0 1 3 3v2"/><path d="M9 12v4M15 12v4"/></svg>
+    <span>Plan a trip</span>
+  </button>
+</div>
+
+<!-- ASK TAB -->
+<div id="tab-ask" class="panel">
+  <div class="chat-header" id="chat-header" style="display:none">
+    <span class="chat-header-title">Conversation</span>
+    <button class="chat-reset" onclick="resetChat()" type="button">New conversation</button>
+  </div>
+  <div id="ask-thread" class="chat-thread"></div>
+  <div class="ask-form">
+    <textarea class="ask-input" id="ask-input" rows="2" placeholder="Where are you going? e.g. dinner at Carbone, client drinks at the NoMad bar, rooftop in the West Village Saturday night..." onkeydown="handleAskKey(event)"></textarea>
+    <button class="gen-btn" onclick="askClaude()" id="ask-btn">Ask →</button>
+  </div>
+  <div class="history-section">
+    <div class="history-title">Worn recently</div>
+    <div id="history-container"></div>
+  </div>
+</div>
+
+<!-- INSIGHTS TAB -->
+<div id="tab-insights" class="panel">
+  <div id="insights-body"><div class="insights-state">Reading your closet…</div></div>
+</div>
+
+<!-- CLOSET TAB -->
+<div id="tab-closet" class="panel">
+  <div class="add-bar">
+    <input class="search-box" style="margin-bottom:0;flex:1" type="text" placeholder="Search your wardrobe..." oninput="renderItems(this.value)" id="closet-search">
+    <button class="add-btn" onclick="openAddForm()">+ Add item</button>
+  </div>
+  <div class="cat-grid" id="cat-grid"></div>
+  <div id="items-list"></div>
+</div>
+
+<!-- ADD/EDIT ITEM MODAL -->
+<div class="modal-backdrop" id="item-modal" style="display:none" onclick="if(event.target===this)closeItemModal()">
+  <div class="modal">
+    <h2 id="modal-title">Add item</h2>
+    <div class="form-row">
+      <label>Item name</label>
+      <input type="text" id="f-item" placeholder="e.g. Navy cashmere sweater">
+    </div>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Category</label>
+        <select id="f-cat" onchange="updateSubOptions()">
+          <option value="Outerwear">Outerwear</option>
+          <option value="Tailoring">Tailoring</option>
+          <option value="Tops">Tops</option>
+          <option value="Knitwear">Knitwear</option>
+          <option value="Pants">Pants</option>
+          <option value="Shoes">Shoes</option>
+          <option value="Accessories">Accessories</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Subcategory</label>
+        <select id="f-sub"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Texture</label>
+      <input type="text" id="f-texture" placeholder="e.g. cashmere, suede, wool">
+    </div>
+    <div class="form-row">
+      <label>Season</label>
+      <div class="btn-group" id="f-s-group">
+        <button type="button" class="btn-opt" data-value="all" onclick="toggleSeasonOpt(this)">All year</button>
+        <button type="button" class="btn-opt" data-value="fall" onclick="toggleSeasonOpt(this)">Fall</button>
+        <button type="button" class="btn-opt" data-value="winter" onclick="toggleSeasonOpt(this)">Winter</button>
+        <button type="button" class="btn-opt" data-value="spring" onclick="toggleSeasonOpt(this)">Spring</button>
+        <button type="button" class="btn-opt" data-value="summer" onclick="toggleSeasonOpt(this)">Summer</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Tone</label>
+      <div class="btn-group" id="f-dark-group">
+        <button type="button" class="btn-opt" data-value="true" onclick="selectOpt(this,'f-dark-group')">Dark</button>
+        <button type="button" class="btn-opt" data-value="false" onclick="selectOpt(this,'f-dark-group')">Light / neutral</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Color</label>
+      <div class="btn-group" id="f-color-group">
+        <button type="button" class="btn-opt" data-value="black" onclick="selectOpt(this,'f-color-group')">Black</button>
+        <button type="button" class="btn-opt" data-value="navy" onclick="selectOpt(this,'f-color-group')">Navy</button>
+        <button type="button" class="btn-opt" data-value="grey" onclick="selectOpt(this,'f-color-group')">Grey</button>
+        <button type="button" class="btn-opt" data-value="brown" onclick="selectOpt(this,'f-color-group')">Brown</button>
+        <button type="button" class="btn-opt" data-value="camel" onclick="selectOpt(this,'f-color-group')">Camel</button>
+        <button type="button" class="btn-opt" data-value="off-white" onclick="selectOpt(this,'f-color-group')">Off-white</button>
+        <button type="button" class="btn-opt" data-value="beige" onclick="selectOpt(this,'f-color-group')">Beige</button>
+        <button type="button" class="btn-opt" data-value="green" onclick="selectOpt(this,'f-color-group')">Green</button>
+        <button type="button" class="btn-opt" data-value="blue" onclick="selectOpt(this,'f-color-group')">Blue</button>
+        <button type="button" class="btn-opt" data-value="white" onclick="selectOpt(this,'f-color-group')">White</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeItemModal()">Cancel</button>
+      <button class="btn-save" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRIP MODAL — body rendered by JS (form → loading → plan) -->
+<div class="modal-backdrop" id="trip-modal" style="display:none" onclick="if(event.target===this)closeTripModal()">
+  <div class="modal trip-modal" id="trip-modal-box"></div>
+</div>
+
+<!-- CLOUD AUTH GATE — blocking sign-in when served from the cloud; cancellable
+     "set up phone access" flow when served locally -->
+<div class="modal-backdrop" id="auth-gate" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <h2 id="auth-title">David's Closet</h2>
+    <p id="auth-sub" style="font-size:13px;color:var(--color-text-muted);line-height:1.6;margin:0.25rem 0 1rem">Sign in to your closet.</p>
+    <div class="form-row">
+      <label>Email</label>
+      <input type="email" id="auth-email" autocomplete="username" placeholder="you@example.com">
+    </div>
+    <div class="form-row" style="margin-top:0.75rem">
+      <label>Password</label>
+      <input type="password" id="auth-password" autocomplete="current-password" placeholder="••••••••">
+    </div>
+    <div id="auth-msg" style="display:none;font-size:12.5px;line-height:1.5;padding:8px 10px;border-radius:var(--radius-sm);margin-top:0.75rem;background:var(--color-bg-subtle)"></div>
+    <div class="modal-actions" style="margin-top:1rem">
+      <button class="btn-cancel" id="auth-cancel" onclick="hideAuthGate()" style="display:none">Cancel</button>
+      <button class="btn-cancel" id="auth-signup-btn" onclick="authSubmit('signup')">Create account</button>
+      <button class="btn-save" id="auth-signin-btn" onclick="authSubmit('signin')">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="settings-modal" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h2>Settings</h2>
+    <div class="form-row">
+      <label>Style profile <span style="text-transform:none;letter-spacing:0;opacity:0.7">— fed to Ask on every request</span></label>
+      <textarea id="settings-style-profile" rows="6" placeholder="Describe your style so Ask has something to work with..."></textarea>
+    </div>
+    <div class="form-row" style="margin-top:1.25rem">
+      <label>API status</label>
+      <div id="settings-api-status" style="font-size:12px;color:var(--color-text-muted);padding:8px 10px;background:var(--color-bg-subtle);border-radius:var(--radius-sm)">Checking…</div>
+    </div>
+    <div class="form-row" style="margin-top:1.25rem">
+      <label>On your phone</label>
+      <div id="settings-phone-hint" style="font-size:12px;color:var(--color-text-muted);padding:8px 10px;background:var(--color-bg-subtle);border-radius:var(--radius-sm);line-height:1.6">Checking…</div>
+    </div>
+    <div class="form-row" style="margin-top:1.25rem">
+      <label>Cloud account</label>
+      <div id="settings-cloud" style="font-size:12px;color:var(--color-text-muted);padding:8px 10px;background:var(--color-bg-subtle);border-radius:var(--radius-sm);line-height:1.6">…</div>
+      <div id="settings-qr" style="margin-top:8px;text-align:center"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn-save" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let W = [];
+let savedOutfits = [];
+let feedback = [];
+let settings = {};
+let editingId = null;
+let selectedCat = null;
+// Chat state — ephemeral per page load.
+//   chatThread: alternating user/assistant turns. Assistant turns carry { content (reply text), outfits: [3] }.
+//   cardState: per-card UI state keyed by `${turnIdx}-${cardIdx}` → { excluded: {slot: [ids]}, wore, saved }.
+let chatThread = [];
+let cardState = {};
+
+const SUB_OPTIONS = {
+  Outerwear:   ['Coats','Jackets','Overshirts'],
+  Tailoring:   ['Sport Jackets','Suits'],
+  Tops:        ['Polo (merino)','Polo (summer)','Polo (SS)','Linen Shirts','Western Shirts','T-Shirts','Other'],
+  Knitwear:    ['Cashmere','Turtlenecks','Other'],
+  Pants:       ['Tailored','Flannel','Chinos','Denim','Linen'],
+  Shoes:       ['Dress','Smart casual','Sneakers','Boots'],
+  Accessories: ['Watches','Belts'],
+};
+
+const SLOT_ORDER = ['outer','top','bottom','shoes','accessory'];
+const SLOT_LABELS = { outer:'Outer', top:'Top', bottom:'Bottom', shoes:'Shoes', accessory:'Accessory' };
+
+const SEASON_LABELS = { all: 'All seasons', fw: 'F/W', fall: 'Fall', winter: 'Winter', ss: 'Spr/Sum', spring: 'Spring', summer: 'Summer', shoulder: 'Not summer', formal: 'Formal' };
+function seasonLabel(s) {
+  if (!s) return '';
+  if (SEASON_LABELS[s]) return SEASON_LABELS[s];
+  return s.split(',').map(v => SEASON_LABELS[v] || v).join(' · ');
+}
+
+// ── Cloud (phone) access ────────────────────────────────────────────────────
+// Served from Supabase (cloud mode): every API call goes to the closet-api edge
+// function carrying the signed-in user's JWT, and the auth gate blocks the app
+// until there's a session. Served locally (Mac/LAN): everything works exactly
+// as before, and Settings gains a one-time "push wardrobe to cloud" migration.
+// The publishable key is safe to ship in the page — data access is enforced
+// server-side by RLS plus the closet-api email allowlist.
+const CLOUD_URL = 'https://umimaxkucnugmkifenyg.supabase.co';
+const CLOUD_KEY = 'sb_publishable_1wJlFgMwGiOwb7-viFNfeg_qczcRsBx';
+const CLOUD_API = CLOUD_URL + '/functions/v1/closet-api';
+// App shell is hosted on GitHub Pages (David's call, 2026-06-12) — Supabase
+// refuses to serve HTML on supabase.co (anti-phishing policy, verified on both
+// Storage and Edge Functions). Data/AI still flow through closet-api on Supabase.
+const CLOUD_APP_URL = 'https://davidlundberg.github.io/closet-app-shell/index.html';
+const IS_CLOUD = location.hostname.endsWith('.supabase.co') || location.hostname.endsWith('.github.io');
+let sb = null;
+let cloudSession = null;
+let authGateMode = 'gate'; // 'gate' (cloud, blocking) | 'migrate' (local, cancellable)
+
+function apiFetch(path, opts) {
+  if (!IS_CLOUD) return fetch(path, opts);
+  const o = Object.assign({}, opts || {});
+  o.headers = Object.assign({}, o.headers || {});
+  o.headers['Authorization'] = 'Bearer ' + (cloudSession ? cloudSession.access_token : CLOUD_KEY);
+  o.headers['apikey'] = CLOUD_KEY;
+  let target = path;
+  if (path === '/data/wardrobe.json') {
+    target = CLOUD_API + '/wardrobe';
+    if ((o.method || 'GET').toUpperCase() === 'POST') o.method = 'PUT';
+  } else if (path.startsWith('/api/')) {
+    target = CLOUD_API + path.slice(4);
+  }
+  return fetch(target, o).then(r => {
+    if (r.status === 401) showAuthGate('gate'); // session expired — re-gate
+    return r;
+  });
+}
+
+async function initCloud() {
+  if (typeof window.supabase === 'undefined') return false; // CDN unreachable; local mode unaffected
+  sb = window.supabase.createClient(CLOUD_URL, CLOUD_KEY);
+  const got = await sb.auth.getSession();
+  cloudSession = (got.data && got.data.session) || null;
+  sb.auth.onAuthStateChange((_evt, s) => { cloudSession = s || null; });
+  return !!cloudSession;
+}
+
+function authMsg(text, isErr) {
+  const el = document.getElementById('auth-msg');
+  if (!text) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = text;
+  el.style.color = isErr ? 'var(--color-danger, #b3261e)' : 'var(--color-text-muted)';
+}
+
+function showAuthGate(mode) {
+  authGateMode = mode || (IS_CLOUD ? 'gate' : 'migrate');
+  document.getElementById('auth-title').textContent =
+    authGateMode === 'migrate' ? 'Set up phone access' : "David's Closet";
+  document.getElementById('auth-sub').textContent = authGateMode === 'migrate'
+    ? 'Create your closet account (or sign in) and this Mac pushes your wardrobe to your private cloud. Then sign in with the same account on your phone.'
+    : 'Sign in to your closet.';
+  document.getElementById('auth-cancel').style.display = authGateMode === 'migrate' ? '' : 'none';
+  authMsg('');
+  document.getElementById('auth-gate').style.display = 'flex';
+}
+function hideAuthGate() { document.getElementById('auth-gate').style.display = 'none'; }
+
+async function authSubmit(kind) {
+  const email = document.getElementById('auth-email').value.trim();
+  const pw = document.getElementById('auth-password').value;
+  if (!email || !pw) { authMsg('Email and password, both.', true); return; }
+  if (!sb) { authMsg('Cloud library not loaded — check your connection and reload.', true); return; }
+  authMsg(kind === 'signup' ? 'Creating account…' : 'Signing in…');
+  const res = kind === 'signup'
+    ? await sb.auth.signUp({ email, password: pw })
+    : await sb.auth.signInWithPassword({ email, password: pw });
+  if (res.error) { authMsg(res.error.message, true); return; }
+  if (kind === 'signup' && !(res.data && res.data.session)) {
+    authMsg('Account created — confirm via the email we just sent you, then press Sign in.');
+    return;
+  }
+  cloudSession = res.data.session;
+  if (authGateMode === 'migrate') {
+    authMsg('Pushing your wardrobe to the cloud…');
+    const ok = await pushWardrobeToCloud();
+    if (!ok) return;
+    authMsg('Done — your closet is in the cloud. Opening phone instructions…');
+    setTimeout(() => { hideAuthGate(); openSettings(); }, 1200);
+  } else {
+    hideAuthGate();
+    bootApp();
+  }
+}
+
+async function pushWardrobeToCloud() {
+  try {
+    const payload = { items: W, savedOutfits, feedback, settings, lastSaved: new Date().toISOString() };
+    const r = await fetch(CLOUD_API + '/wardrobe', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + cloudSession.access_token,
+        'apikey': CLOUD_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) { authMsg(out.error || ('Push failed (' + r.status + ')'), true); return false; }
+    return true;
+  } catch (e) { authMsg('Push failed — ' + e.message, true); return false; }
+}
+
+async function cloudSignOut() {
+  if (sb) await sb.auth.signOut();
+  cloudSession = null;
+  if (IS_CLOUD) { closeSettings(); showAuthGate('gate'); }
+  else renderCloudSettings();
+}
+
+// DOM-built (no innerHTML with dynamic values) per security guidance.
+function elMake(tag, text, attrs) {
+  const n = document.createElement(tag);
+  if (text != null) n.textContent = text;
+  for (const k in (attrs || {})) n.setAttribute(k, attrs[k]);
+  return n;
+}
+function linkMake(text, onClick) {
+  const a = elMake('a', text, { href: '#' });
+  a.addEventListener('click', (e) => { e.preventDefault(); onClick(); });
+  return a;
+}
+
+function renderQr(text, container) {
+  const draw = () => {
+    try {
+      const q = qrcode(0, 'M');
+      q.addData(text); q.make();
+      const img = elMake('img', null, { alt: 'Install QR code' });
+      img.src = q.createDataURL(4, 8);
+      img.style.imageRendering = 'pixelated';
+      img.style.width = '164px';
+      container.replaceChildren(img);
+      const cap = elMake('div', text);
+      cap.style.cssText = 'font-size:11px;color:var(--color-text-muted);margin-top:6px;word-break:break-all';
+      container.appendChild(cap);
+    } catch (e) { container.textContent = text; }
+  };
+  if (typeof qrcode !== 'undefined') return draw();
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+  s.onload = draw;
+  document.head.appendChild(s);
+}
+
+async function renderCloudSettings() {
+  const el = document.getElementById('settings-cloud');
+  const qr = document.getElementById('settings-qr');
+  if (!el) return;
+  qr.replaceChildren();
+  const sess = sb ? ((await sb.auth.getSession()).data || {}).session : null;
+  if (sess) cloudSession = sess;
+  el.replaceChildren();
+  if (IS_CLOUD) {
+    if (sess) {
+      el.append('Signed in as ');
+      const who = elMake('strong', sess.user.email);
+      who.style.color = 'var(--color-text)';
+      el.append(who, ' · ', linkMake('Sign out', cloudSignOut));
+    } else {
+      el.textContent = 'Not signed in.';
+    }
+    return;
+  }
+  if (sess) {
+    el.append('Cloud linked as ');
+    const who = elMake('strong', sess.user.email);
+    who.style.color = 'var(--color-text)';
+    el.append(who, '. ',
+      linkMake('Re-push wardrobe', () => { closeSettings(); showAuthGate('migrate'); }),
+      ' · ', linkMake('Sign out', cloudSignOut));
+    const hint = elMake('div', 'On your phone: scan this, sign in, then Share → Add to Home Screen.');
+    hint.style.marginTop = '6px';
+    el.appendChild(hint);
+    renderQr(CLOUD_APP_URL, qr);
+  } else {
+    const btn = elMake('button', 'Set up phone access…', { class: 'btn-save' });
+    btn.style.width = '100%';
+    btn.addEventListener('click', () => { closeSettings(); showAuthGate('migrate'); });
+    el.appendChild(btn);
+    const hint = elMake('div', 'One account, your closet on every device — works off wifi.');
+    hint.style.marginTop = '6px';
+    el.appendChild(hint);
+  }
+}
+
+// ── Load / Save ─────────────────────────────────────────────────────────────
+async function load() {
+  try {
+    const r = await apiFetch('/data/wardrobe.json');
+    const raw = await r.json();
+    // Cloud GET /wardrobe returns {doc, lastSaved}; the local server returns the
+    // wardrobe object directly. Unwrap so both shapes populate the app.
+    const data = IS_CLOUD ? (raw && raw.doc ? raw.doc : {}) : (raw || {});
+    W = data.items || [];
+    savedOutfits = data.savedOutfits || [];
+    feedback = data.feedback || [];
+    settings = data.settings || {};
+    setStatus('ok');
+    renderCats();
+    renderHistory();
+  } catch(e) {
+    setStatus('error');
+    console.error(e);
+  }
+}
+
+async function saveToServer() {
+  const payload = { items: W, savedOutfits, feedback, settings, lastSaved: new Date().toISOString() };
+  try {
+    await apiFetch('/data/wardrobe.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload, null, 2),
+    });
+    setStatus('ok');
+  } catch(e) {
+    setStatus('error');
+  }
+}
+
+function setStatus(state) {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  if (state === 'ok') {
+    const sig = feedback.length ? ` · ${feedback.length} signal${feedback.length !== 1 ? 's' : ''}` : '';
+    dot.className = 'status-dot';
+    txt.textContent = `${W.length} items${sig} · saved`;
+  } else {
+    dot.className = 'status-dot error';
+    txt.textContent = IS_CLOUD ? "Cloud unreachable — changes won't persist" : "Server offline — changes won't persist";
+  }
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ── Button group helpers ─────────────────────────────────────────────────────
+function selectOpt(btn, groupId) {
+  document.querySelectorAll(`#${groupId} .btn-opt`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function getOpt(groupId) {
+  return document.querySelector(`#${groupId} .btn-opt.active`)?.dataset.value || '';
+}
+function getOpts(groupId) {
+  return [...document.querySelectorAll(`#${groupId} .btn-opt.active`)].map(b => b.dataset.value);
+}
+function setOpt(groupId, value) {
+  document.querySelectorAll(`#${groupId} .btn-opt`).forEach(b => {
+    b.classList.toggle('active', b.dataset.value === value);
+  });
+}
+function toggleSeasonOpt(btn) {
+  const val = btn.dataset.value;
+  const allBtn = document.querySelector('#f-s-group [data-value="all"]');
+  if (val === 'all') {
+    document.querySelectorAll('#f-s-group .btn-opt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  } else {
+    allBtn.classList.remove('active');
+    const active = document.querySelectorAll('#f-s-group .btn-opt.active');
+    if (btn.classList.contains('active') && active.length === 1) return;
+    btn.classList.toggle('active');
+  }
+}
+function getSeasonValue() {
+  const active = getOpts('f-s-group');
+  if (!active.length || active.includes('all')) return 'all';
+  if (active.length === 4) return 'all';
+  return active.join(',');
+}
+function setSeasonOpts(s) {
+  document.querySelectorAll('#f-s-group .btn-opt').forEach(b => b.classList.remove('active'));
+  const vals = s === 'fw' ? ['fall','winter'] :
+               s === 'ss' ? ['spring','summer'] :
+               s === 'shoulder' ? ['fall','winter','spring'] :
+               s === 'all' ? ['all'] :
+               s ? s.split(',') : ['all'];
+  vals.forEach(v => {
+    const btn = document.querySelector(`#f-s-group [data-value="${v}"]`);
+    if (btn) btn.classList.add('active');
+  });
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function showTab(id, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'closet') renderCats();
+  if (id === 'ask') renderHistory();
+  if (id === 'insights') loadInsights();
+}
+
+// ── Closet ─────────────────────────────────────────────────────────────────
+function renderCats() {
+  const cats = [...new Set(W.map(w => w.cat))];
+  document.getElementById('cat-grid').innerHTML = cats.map(c => {
+    const count = W.filter(w => w.cat === c).length;
+    const sel = selectedCat === c ? ' selected' : '';
+    return `<div class="cat-card${sel}" onclick="selectCat('${esc(c)}')">\
+<div class="cat-name">${esc(c)}</div><div class="cat-count">${count} items</div></div>`;
+  }).join('');
+  renderItems(document.getElementById('closet-search').value);
+}
+
+function selectCat(c) {
+  selectedCat = selectedCat === c ? null : c;
+  renderCats();
+}
+
+function renderItems(search = '') {
+  const term = (search || '').trim().toLowerCase();
+  let items = W;
+  if (selectedCat) items = items.filter(w => w.cat === selectedCat);
+  if (term) items = items.filter(w =>
+    w.item.toLowerCase().includes(term) ||
+    (w.sub || '').toLowerCase().includes(term) ||
+    (w.cat || '').toLowerCase().includes(term) ||
+    (w.texture && w.texture.toLowerCase().includes(term))
+  );
+
+  const bySub = {};
+  items.forEach(w => { (bySub[w.sub] = bySub[w.sub] || []).push(w); });
+
+  const list = document.getElementById('items-list');
+  if (!items.length) { list.innerHTML = '<p style="font-size:13px;color:var(--color-text-muted);padding:1rem 0">No items found.</p>'; return; }
+
+  list.innerHTML = Object.entries(bySub).map(([sub, rows]) => `
+    <div class="section-label">${esc(sub)}</div>
+    ${rows.map(w => `
+      <div class="item-row">
+        <span class="item-name">${esc(w.item)}</span>
+        <div class="item-actions">
+          <span class="season-badge">${esc(seasonLabel(w.s))}</span>
+          <button class="action-btn" onclick="openEditForm('${esc(w.id)}')">edit</button>
+          <button class="action-btn del" onclick="deleteItem('${esc(w.id)}')">✕</button>
+        </div>
+      </div>`).join('')}
+  `).join('');
+}
+
+// ── Add / Edit Modal ────────────────────────────────────────────────────────
+function updateSubOptions(selectedSub) {
+  const cat = document.getElementById('f-cat').value;
+  const subs = SUB_OPTIONS[cat] || [];
+  const sel = document.getElementById('f-sub');
+  sel.innerHTML = subs.map(s => `<option value="${esc(s)}"${s===selectedSub?' selected':''}>${esc(s)}</option>`).join('');
+}
+
+function openAddForm() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'Add item';
+  document.getElementById('f-item').value = '';
+  document.getElementById('f-cat').value = 'Outerwear';
+  updateSubOptions();
+  setSeasonOpts('all');
+  document.getElementById('f-texture').value = '';
+  setOpt('f-dark-group', 'false');
+  setOpt('f-color-group', 'black');
+  document.getElementById('item-modal').style.display = 'flex';
+  document.getElementById('f-item').focus();
+}
+
+function openEditForm(id) {
+  const w = W.find(x => x.id === id);
+  if (!w) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'Edit item';
+  document.getElementById('f-item').value = w.item;
+  document.getElementById('f-cat').value = w.cat;
+  updateSubOptions(w.sub);
+  setSeasonOpts(w.s);
+  document.getElementById('f-texture').value = w.texture || '';
+  setOpt('f-dark-group', String(w.dark));
+  setOpt('f-color-group', w.color || 'black');
+  document.getElementById('item-modal').style.display = 'flex';
+  document.getElementById('f-item').focus();
+}
+
+function closeItemModal() {
+  document.getElementById('item-modal').style.display = 'none';
+  editingId = null;
+}
+
+async function saveItem() {
+  const name = document.getElementById('f-item').value.trim();
+  if (!name) { document.getElementById('f-item').focus(); return; }
+  const entry = {
+    id: editingId || uid(),
+    cat: document.getElementById('f-cat').value,
+    sub: document.getElementById('f-sub').value,
+    item: name,
+    s: getSeasonValue(),
+    texture: document.getElementById('f-texture').value.trim() || 'unknown',
+    dark: getOpt('f-dark-group') === 'true',
+    color: getOpt('f-color-group'),
+  };
+  if (editingId) {
+    const idx = W.findIndex(x => x.id === editingId);
+    if (idx >= 0) W[idx] = entry;
+  } else {
+    W.push(entry);
+  }
+  closeItemModal();
+  await saveToServer();
+  renderCats();
+}
+
+async function deleteItem(id) {
+  const w = W.find(x => x.id === id);
+  if (!w) return;
+  if (!confirm(`Remove "${w.item}" from your closet?`)) return;
+  W = W.filter(x => x.id !== id);
+  await saveToServer();
+  renderCats();
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settings-style-profile').value = settings.style_profile || '';
+  document.getElementById('settings-api-status').textContent = 'Using Sonnet 4.6 · API key configured server-side';
+  loadPhoneHint();
+  renderCloudSettings();
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+async function loadPhoneHint() {
+  const el = document.getElementById('settings-phone-hint');
+  if (IS_CLOUD) {
+    el.textContent = "You're on the cloud app — works anywhere. In Safari: Share → Add to Home Screen to install.";
+    return;
+  }
+  el.textContent = 'Checking…';
+  try {
+    const r = await apiFetch('/api/appinfo');
+    const info = await r.json();
+    if (info.ok && info.lan_url) {
+      el.innerHTML = `On the same wifi, open <strong style="color:var(--color-text)">${esc(info.lan_url)}</strong> in Safari, then Share → <strong>Add to Home Screen</strong> to install the app.`;
+    } else {
+      el.textContent = 'No LAN address detected — connect this Mac to wifi to use the app from your phone.';
+    }
+  } catch (e) {
+    el.textContent = 'Server unreachable — phone access needs the server running.';
+  }
+}
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+async function saveSettings() {
+  const profile = document.getElementById('settings-style-profile').value.trim();
+  settings = settings || {};
+  settings.style_profile = profile;
+  await saveToServer();
+  closeSettings();
+}
+
+// ── Ask (chat) ──────────────────────────────────────────────────────────────
+function handleAskKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askClaude(); }
+}
+
+function cardKey(turnIdx, cardIdx) { return `${turnIdx}-${cardIdx}`; }
+function getCardState(turnIdx, cardIdx) {
+  const k = cardKey(turnIdx, cardIdx);
+  if (!cardState[k]) {
+    cardState[k] = { excluded: { outer: [], top: [], bottom: [], shoes: [], accessory: [] }, wore: false, saved: false, liked: false };
+  }
+  return cardState[k];
+}
+
+const ASK_PLACEHOLDER_INITIAL = "Where are you going? e.g. dinner at Carbone, client drinks at the NoMad bar, rooftop in the West Village Saturday night...";
+const ASK_PLACEHOLDER_FOLLOWUP = "Tell me what to change — e.g. more casual, swap the shoes on option 2, different layer, warmer...";
+
+function syncAskPlaceholder() {
+  const input = document.getElementById('ask-input');
+  const btn = document.getElementById('ask-btn');
+  const hasAssistantTurn = chatThread.some(m => m.role === 'assistant' && !m.pending && !m.errored);
+  if (input) input.placeholder = hasAssistantTurn ? ASK_PLACEHOLDER_FOLLOWUP : ASK_PLACEHOLDER_INITIAL;
+  if (btn && !btn.disabled) btn.textContent = hasAssistantTurn ? 'Send →' : 'Ask →';
+}
+
+function getCard(turnIdx, cardIdx) {
+  const turn = chatThread[turnIdx];
+  if (!turn || turn.role !== 'assistant') return null;
+  return (turn.outfits || [])[cardIdx] || null;
+}
+
+// Find the most recent prior user turn — used as the "occasion" attribution
+// when saving/wearing a card from this turn.
+function userMessageForTurn(turnIdx) {
+  for (let i = turnIdx - 1; i >= 0; i--) {
+    if (chatThread[i].role === 'user') return chatThread[i].content;
+  }
+  return '';
+}
+
+function resetChat() {
+  chatThread = [];
+  cardState = {};
+  document.getElementById('ask-input').value = '';
+  document.getElementById('ask-btn').textContent = 'Ask →';
+  syncAskPlaceholder();
+  renderThread();
+}
+
+async function askClaude() {
+  const input = document.getElementById('ask-input');
+  const msg = input.value.trim();
+  if (!msg) { input.focus(); return; }
+
+  // Optimistically push the user turn + a "thinking" assistant placeholder.
+  chatThread.push({ role: 'user', content: msg });
+  chatThread.push({ role: 'assistant', content: '', outfits: [], pending: true });
+  input.value = '';
+  renderThread();
+
+  const btn = document.getElementById('ask-btn');
+  btn.disabled = true;
+
+  // Strip outfits + pending flag before sending — the model only needs role/content.
+  const wireMessages = chatThread
+    .filter(m => !m.pending)
+    .map(m => ({ role: m.role, content: m.content || '' }))
+    .filter(m => m.content);
+
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 60000);
+  try {
+    const r = await apiFetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: wireMessages }),
+      signal: abort.signal,
+    });
+    clearTimeout(timer);
+    const data = await r.json();
+    if (!r.ok || data.error) {
+      chatThread[chatThread.length - 1] = { role: 'assistant', content: data.error || 'Something went wrong — try again.', outfits: [], errored: true };
+      renderThread();
+      return;
+    }
+    const outfits = Array.isArray(data.outfits) ? data.outfits : [];
+    if (!outfits.length) {
+      chatThread[chatThread.length - 1] = { role: 'assistant', content: 'Response was missing outfit data. Try rephrasing.', outfits: [], errored: true };
+      renderThread();
+      return;
+    }
+    chatThread[chatThread.length - 1] = {
+      role: 'assistant',
+      content: data.reply || '',
+      outfits: outfits.map(o => ({
+        slots: o.slots || {},
+        title: o.title || 'Option',
+        vibe: o.vibe || '',
+        rationale: o.rationale || '',
+      })),
+    };
+    btn.textContent = 'Send →';
+    renderThread();
+  } catch(e) {
+    clearTimeout(timer);
+    const errMsg = e.name === 'AbortError'
+      ? 'Took too long — try again.'
+      : 'Connection error — is the server running?';
+    chatThread[chatThread.length - 1] = { role: 'assistant', content: errMsg, outfits: [], errored: true };
+    renderThread();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderThread() {
+  const thread = document.getElementById('ask-thread');
+  const header = document.getElementById('chat-header');
+  if (!thread) return;
+  if (header) header.style.display = chatThread.length ? 'flex' : 'none';
+  syncAskPlaceholder();
+  if (!chatThread.length) {
+    thread.innerHTML = '';
+    return;
+  }
+
+  const html = chatThread.map((turn, turnIdx) => {
+    if (turn.role === 'user') {
+      return `<div class="chat-turn"><div class="chat-msg-user">${esc(turn.content)}</div></div>`;
+    }
+    // assistant
+    if (turn.pending) {
+      return `<div class="chat-turn"><div class="chat-msg-assistant"><span class="ask-thinking">Thinking</span></div></div>`;
+    }
+    const replyHtml = turn.content ? `<div class="chat-msg-assistant">${esc(turn.content)}</div>` : '';
+    if (turn.errored || !turn.outfits || !turn.outfits.length) {
+      return `<div class="chat-turn">${replyHtml}</div>`;
+    }
+    const cardsHtml = turn.outfits.map((card, cardIdx) => renderAskCardHtml(turnIdx, cardIdx, card)).join('');
+    return `<div class="chat-turn">${replyHtml}<div class="card-group">${cardsHtml}</div></div>`;
+  }).join('');
+
+  thread.innerHTML = html;
+  thread.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function renderAskCardHtml(turnIdx, cardIdx, card) {
+  const { slots = {}, title = '', vibe = '', rationale = '' } = card;
+  const state = getCardState(turnIdx, cardIdx);
+
+  const slotHtml = SLOT_ORDER.map(slotKey => {
+    const slot = slots[slotKey] || {};
+    const w = slot.id ? W.find(x => x.id === slot.id) : null;
+    const required = (slotKey === 'top' || slotKey === 'bottom' || slotKey === 'shoes');
+    const bodyHtml = w
+      ? `<div class="slot-item">${esc(w.item)}</div>${slot.reason ? `<div class="slot-reason">${esc(slot.reason)}</div>` : ''}`
+      : `<div class="slot-empty">${required ? '— missing —' : '— skipped —'}</div>`;
+    return `<div class="slot-row">
+      <span class="slot-label">${SLOT_LABELS[slotKey]}</span>
+      <div class="slot-body">${bodyHtml}</div>
+      <button class="slot-swap" onclick="openSlotPicker('ask', ${turnIdx}, ${cardIdx}, '${slotKey}')">${w ? 'swap' : 'add'} ▾</button>
+    </div>${pickerPanelHtml('ask', turnIdx, cardIdx, slotKey, slot.id || null)}`;
+  }).join('');
+
+  return `
+    <div class="ask-card">
+      <div class="ask-card-index">Option ${cardIdx + 1}</div>
+      <div class="ask-card-header">
+        <span class="ask-card-title">${esc(title)}</span>
+        <span class="ask-card-vibe">${esc(vibe)}</span>
+      </div>
+      ${rationale ? `<div class="ask-rationale">${esc(rationale)}</div>` : ''}
+      <div class="slot-list">${slotHtml}</div>
+      <div class="card-actions">
+        <button class="card-action${state.saved ? ' active' : ''}" ${state.saved ? 'disabled' : ''} onclick="saveAskOutfit(${turnIdx}, ${cardIdx})">${state.saved ? '♥ saved' : '♡ save'}</button>
+        <button class="card-action${state.wore ? ' active' : ''}" ${state.wore ? 'disabled' : ''} onclick="wearAskOutfit(${turnIdx}, ${cardIdx})">${state.wore ? '✓ worn' : '✓ wore this'}</button>
+        <button class="card-action${state.liked ? ' active' : ''}" ${state.liked ? 'disabled' : ''} onclick="likeAskOutfit(${turnIdx}, ${cardIdx})">${state.liked ? '↑ liked' : '↑ like'}</button>
+      </div>
+    </div>`;
+}
+
+async function swapSlot(turnIdx, cardIdx, slotKey, btnEl) {
+  const card = getCard(turnIdx, cardIdx);
+  if (!card) return;
+  btnEl.disabled = true;
+  btnEl.classList.add('swapping');
+
+  const state = getCardState(turnIdx, cardIdx);
+  const currentIds = {};
+  SLOT_ORDER.forEach(k => { currentIds[k] = (card.slots[k] || {}).id || null; });
+
+  const currentId = (card.slots[slotKey] || {}).id;
+  const excluded = state.excluded[slotKey] || [];
+  if (currentId && !excluded.includes(currentId)) excluded.push(currentId);
+
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 30000);
+  try {
+    const r = await apiFetch('/api/chat/swap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: userMessageForTurn(turnIdx),
+        slot: slotKey,
+        current: currentIds,
+        exclude: excluded,
+      }),
+      signal: abort.signal,
+    });
+    clearTimeout(timer);
+    const data = await r.json();
+    if (!r.ok || data.error) {
+      alert(data.error || 'Swap failed — try again.');
+      return;
+    }
+    card.slots[slotKey] = { id: data.id || null, reason: data.reason || '' };
+    state.excluded[slotKey] = excluded;
+    renderThread();
+  } catch(e) {
+    clearTimeout(timer);
+    alert(e.name === 'AbortError' ? 'Swap took too long — try again.' : 'Connection error.');
+  } finally {
+    btnEl.disabled = false;
+    btnEl.classList.remove('swapping');
+  }
+}
+
+function collectCardItems(card) {
+  if (!card) return [];
+  return SLOT_ORDER.map(k => (card.slots[k] || {}).id)
+    .filter(Boolean)
+    .map(id => W.find(w => w.id === id))
+    .filter(Boolean);
+}
+
+async function saveAskOutfit(turnIdx, cardIdx) {
+  const card = getCard(turnIdx, cardIdx);
+  const state = getCardState(turnIdx, cardIdx);
+  if (!card || state.saved) return;
+  const items = collectCardItems(card);
+  if (!items.length) return;
+  const occasion = userMessageForTurn(turnIdx);
+  const now = new Date().toISOString();
+  savedOutfits.unshift({
+    id: uid(),
+    title: card.title,
+    vibe: card.vibe,
+    items: items.map(x => x.item),
+    note: card.rationale || null,
+    savedAt: now,
+    wore: false,
+  });
+  feedback.unshift({
+    id: uid(), type: 'favorite',
+    occasion,
+    season: '',
+    items: items.map(x => ({ id: x.id, item: x.item })),
+    timestamp: now,
+  });
+  state.saved = true;
+  await saveToServer();
+  renderThread();
+  renderHistory();
+}
+
+async function wearAskOutfit(turnIdx, cardIdx) {
+  const card = getCard(turnIdx, cardIdx);
+  const state = getCardState(turnIdx, cardIdx);
+  if (!card || state.wore) return;
+  const items = collectCardItems(card);
+  if (!items.length) return;
+  const occasion = userMessageForTurn(turnIdx);
+  const now = new Date().toISOString();
+  savedOutfits.unshift({
+    id: uid(),
+    title: card.title,
+    vibe: card.vibe,
+    items: items.map(x => x.item),
+    note: card.rationale || null,
+    savedAt: now,
+    wore_at: now,
+    wore: true,
+  });
+  feedback.unshift({
+    id: uid(), type: 'picked',
+    occasion,
+    season: '',
+    items: items.map(x => ({ id: x.id, item: x.item })),
+    timestamp: now,
+  });
+  state.wore = true;
+  insightsStale = true;
+  await saveToServer();
+  renderThread();
+  renderHistory();
+}
+
+async function likeAskOutfit(turnIdx, cardIdx) {
+  const card = getCard(turnIdx, cardIdx);
+  const state = getCardState(turnIdx, cardIdx);
+  if (!card || state.liked) return;
+  const items = collectCardItems(card);
+  if (!items.length) return;
+  feedback.unshift({
+    id: uid(), type: 'like',
+    occasion: userMessageForTurn(turnIdx),
+    season: '',
+    items: items.map(x => ({ id: x.id, item: x.item })),
+    timestamp: new Date().toISOString(),
+  });
+  state.liked = true;
+  await saveToServer();
+  renderThread();
+}
+
+// ── Today view ───────────────────────────────────────────────────────────────
+// Page-state cache: weather + hero outfit load once on app open; refetch only on
+// chip change or "Another option" — never on tab switches.
+// NOTE: all dynamic strings rendered below pass through esc() (same XSS-safe
+// pattern as the rest of this file).
+function freshDayState() {
+  return {
+    outfit: null,       // { title, vibe, reason, slots: {k: {id, reason}} }
+    wore: false,
+    saved: false,
+    excluded: { outer: [], top: [], bottom: [], shoes: [], accessory: [] },
+  };
+}
+let todayState = {
+  weather: undefined,   // undefined = loading, null = unavailable, object = data
+  day: 'today',         // 'today' | 'tomorrow' — which day the view shows
+  occasion: null,       // selected chip label, or null = versatile day
+  loading: false,
+  error: null,
+  // Outfits are cached per day so toggling Today/Tomorrow doesn't re-compose.
+  byDay: { today: freshDayState(), tomorrow: freshDayState() },
+};
+function dayState() { return todayState.byDay[todayState.day]; }
+let todayInitialized = false;
+
+const OCCASION_PROMPTS = {
+  'Office':      'a day at the office — polished business casual',
+  'Dinner out':  'dinner out at a good restaurant in the city',
+  'Weekend':     'a relaxed weekend day around the city',
+  'Date night':  'date night — sharp, warm, a little elevated',
+  'Smart event': 'a smart event — elevated dress code, refined',
+};
+
+function todayOccasionText() {
+  return todayState.occasion ? OCCASION_PROMPTS[todayState.occasion] : 'a regular day — versatile smart casual';
+}
+
+function initToday() {
+  if (todayInitialized) return;
+  todayInitialized = true;
+  renderTodayDate();
+  loadTodayWeather();
+  loadTrips();
+  requestToday();
+}
+
+function renderTodayDate() {
+  const el = document.getElementById('today-date');
+  if (!el) return;
+  const d = new Date();
+  if (todayState.day === 'tomorrow') d.setDate(d.getDate() + 1);
+  el.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function selectDay(day) {
+  if (day === todayState.day || todayState.loading) return;
+  todayState.day = day;
+  todayState.error = null;
+  document.querySelectorAll('#day-toggle .day-opt').forEach(b =>
+    b.classList.toggle('active', b.dataset.day === day));
+  renderTodayDate();
+  renderWeatherStrip();
+  if (dayState().outfit) {
+    renderTodayHero();       // cached — no re-compose on toggle
+  } else {
+    requestToday();
+  }
+}
+
+async function loadTodayWeather() {
+  try {
+    const r = await apiFetch('/api/weather');
+    const data = await r.json();
+    todayState.weather = (data && data.ok !== false && typeof data.temp === 'number') ? data : null;
+  } catch (e) {
+    todayState.weather = null;
+  }
+  renderWeatherStrip();
+}
+
+// Simple line icons — stroke currentColor, no emoji. Static markup, no user input.
+function weatherIconSvg(code) {
+  const open = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  const cloud = '<path d="M7 17.5a4 4 0 1 1 .6-7.96A5 5 0 0 1 17.3 10.6a3.5 3.5 0 0 1-.3 6.9H7z"/>';
+  let body;
+  if (code <= 1) {
+    body = '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>';
+  } else if (code === 2) {
+    body = '<circle cx="16.5" cy="7.5" r="2.6"/><path d="M16.5 2.8v1.4M21.2 7.5h-1.4M19.8 4.2l-1 1M19.8 10.8l-1-1"/>'
+         + '<path d="M6.5 19a3.6 3.6 0 1 1 .55-7.16A4.5 4.5 0 0 1 15.8 12.8a3.1 3.1 0 0 1-.3 6.2h-9z"/>';
+  } else if (code === 3) {
+    body = cloud;
+  } else if (code === 45 || code === 48) {
+    body = '<path d="M4 9h16M6 13h13M4 17h14"/>';
+  } else if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
+    body = '<path d="M7 15a4 4 0 1 1 .6-7.96A5 5 0 0 1 17.3 8.1a3.5 3.5 0 0 1-.3 6.9H7z"/>'
+         + '<path d="M8.5 18l-1 2.5M12.5 18l-1 2.5M16.5 18l-1 2.5"/>';
+  } else if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+    body = '<path d="M7 15a4 4 0 1 1 .6-7.96A5 5 0 0 1 17.3 8.1a3.5 3.5 0 0 1-.3 6.9H7z"/>'
+         + '<path d="M8 18.5h.01M12 20h.01M16 18.5h.01M10 21h.01M14 21.5h.01" stroke-width="2"/>';
+  } else if (code >= 95) {
+    body = '<path d="M7 14a4 4 0 1 1 .6-7.96A5 5 0 0 1 17.3 7.1a3.5 3.5 0 0 1-.3 6.9H8"/>'
+         + '<path d="M12.5 14.5L10 18.5h3L11 22"/>';
+  } else {
+    body = cloud;
+  }
+  return open + body + '</svg>';
+}
+
+function renderWeatherStrip() {
+  const el = document.getElementById('today-weather');
+  if (!el) return;
+  const w = todayState.weather;
+  if (w === undefined) {
+    el.innerHTML = '<div class="weather-unavailable">Checking the sky…</div>';
+    return;
+  }
+  if (!w) {
+    el.innerHTML = '<div class="weather-unavailable">—&ensp;Weather unavailable</div>';
+    return;
+  }
+  if (todayState.day === 'tomorrow') {
+    // Forecast-only state: no current temp / feels-like — it's tomorrow.
+    const t = w.tomorrow;
+    if (!t) {
+      el.innerHTML = '<div class="weather-unavailable">—&ensp;Forecast unavailable</div>';
+      return;
+    }
+    const tPrecip = (t.precip_prob || 0) > 15 ? `${Number(t.precip_prob)}% rain` : 'rain unlikely';
+    el.innerHTML = `
+      <div class="weather-icon">${weatherIconSvg(Number(t.code) || 0)}</div>
+      <div>
+        <div class="weather-temp">${Math.round(t.hi)}° <span class="weather-temp-lo">/ ${Math.round(t.lo)}°</span></div>
+        <div class="weather-feels">tomorrow's forecast</div>
+      </div>
+      <div class="weather-meta">
+        <div class="weather-summary">${esc(t.summary || '')}</div>
+        <div class="weather-hilo">${esc(tPrecip)}</div>
+      </div>`;
+    return;
+  }
+  const precip = (w.precip_prob || 0) > 15 ? ` · ${Number(w.precip_prob)}% rain` : '';
+  el.innerHTML = `
+    <div class="weather-icon">${weatherIconSvg(Number(w.code) || 0)}</div>
+    <div>
+      <div class="weather-temp">${Math.round(w.temp)}°</div>
+      <div class="weather-feels">feels ${Math.round(w.feels_like)}°</div>
+    </div>
+    <div class="weather-meta">
+      <div class="weather-summary">${esc(w.summary || '')}</div>
+      <div class="weather-hilo">H ${Math.round(w.hi)}° · L ${Math.round(w.lo)}°${precip}</div>
+    </div>`;
+}
+
+function selectOccasion(btn) {
+  const val = btn.dataset.occasion;
+  todayState.occasion = (todayState.occasion === val) ? null : val;
+  document.querySelectorAll('#occasion-chips .btn-opt').forEach(b =>
+    b.classList.toggle('active', b.dataset.occasion === todayState.occasion));
+  // Occasion changed — both day caches are stale; refetch the visible day only.
+  todayState.byDay = { today: freshDayState(), tomorrow: freshDayState() };
+  requestToday();
+}
+
+async function requestToday(excludeIds = []) {
+  const day = todayState.day; // capture — user may toggle while in flight
+  todayState.loading = true;
+  todayState.error = null;
+  renderTodayHero();
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 60000);
+  try {
+    const r = await apiFetch('/api/today', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        occasion: todayState.occasion ? todayOccasionText() : null,
+        exclude_ids: excludeIds,
+        day,
+      }),
+      signal: abort.signal,
+    });
+    clearTimeout(timer);
+    const data = await r.json();
+    if (!r.ok || data.error || data.ok === false) {
+      throw new Error(data.error || 'Could not compose an outfit — try again.');
+    }
+    const slots = {};
+    SLOT_ORDER.forEach(k => { slots[k] = { id: (data.slots || {})[k] || null, reason: '' }; });
+    todayState.byDay[day] = freshDayState();
+    todayState.byDay[day].outfit = {
+      title: data.title || (day === 'tomorrow' ? 'Tomorrow' : 'Today'),
+      vibe: data.vibe || '',
+      reason: data.reason || '',
+      slots,
+    };
+  } catch (e) {
+    clearTimeout(timer);
+    todayState.error = e.name === 'AbortError'
+      ? 'Took too long — try again.'
+      : (e.message || 'Connection error — is the server running?');
+  } finally {
+    todayState.loading = false;
+    renderTodayHero();
+  }
+}
+
+function renderTodayHero() {
+  const el = document.getElementById('today-hero');
+  if (!el) return;
+  const dayWord = todayState.day === 'tomorrow' ? 'Tomorrow' : 'Today';
+
+  if (todayState.loading) {
+    el.innerHTML = `
+      <div class="hero-card" id="today-skeleton">
+        <div class="hero-eyebrow">${dayWord}'s outfit</div>
+        <div class="today-composing"><span class="ask-thinking">Composing ${dayWord.toLowerCase()}'s outfit</span></div>
+        <div class="skeleton-line" style="width:55%;height:18px;margin-bottom:16px"></div>
+        <div class="skeleton-line" style="width:90%;margin-bottom:10px"></div>
+        <div class="skeleton-line" style="width:74%;margin-bottom:10px"></div>
+        <div class="skeleton-line" style="width:82%;margin-bottom:10px"></div>
+        <div class="skeleton-line" style="width:66%"></div>
+      </div>`;
+    return;
+  }
+
+  if (todayState.error) {
+    el.innerHTML = `
+      <div class="hero-card">
+        <div class="hero-eyebrow">${dayWord}'s outfit</div>
+        <div class="today-error">${esc(todayState.error)}</div>
+        <button class="card-action" onclick="requestToday()">Try again</button>
+      </div>`;
+    return;
+  }
+
+  const ds = dayState();
+  const o = ds.outfit;
+  if (!o) { el.innerHTML = ''; return; }
+
+  const slotHtml = SLOT_ORDER.map(slotKey => {
+    const slot = o.slots[slotKey] || {};
+    const w = slot.id ? W.find(x => x.id === slot.id) : null;
+    const required = (slotKey === 'top' || slotKey === 'bottom' || slotKey === 'shoes');
+    const bodyHtml = w
+      ? `<div class="slot-item">${esc(w.item)}</div>${slot.reason ? `<div class="slot-reason">${esc(slot.reason)}</div>` : ''}`
+      : `<div class="slot-empty">${required ? '— missing —' : '— skipped —'}</div>`;
+    // Skipped/missing slots offer "add" (fill the slot in) rather than a
+    // nonsensical "swap" of nothing — same endpoint, honest affordance.
+    return `<div class="slot-row">
+      <span class="slot-label">${SLOT_LABELS[slotKey]}</span>
+      <div class="slot-body">${bodyHtml}</div>
+      <button class="slot-swap" onclick="openSlotPicker('today', 0, 0, '${slotKey}')">${w ? 'swap' : 'add'} ▾</button>
+    </div>${pickerPanelHtml('today', 0, 0, slotKey, slot.id || null)}`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="hero-card">
+      <div class="hero-eyebrow">${dayWord}'s outfit</div>
+      <div class="hero-header">
+        <span class="hero-title">${esc(o.title)}</span>
+        <span class="hero-vibe">${esc(o.vibe)}</span>
+      </div>
+      ${o.reason ? `<div class="hero-reason">${esc(o.reason)}</div>` : ''}
+      <div class="slot-list">${slotHtml}</div>
+      <div class="hero-actions">
+        <button class="card-action primary${ds.wore ? ' active' : ''}" ${ds.wore ? 'disabled' : ''} onclick="wearToday()">${ds.wore ? '✓ worn' : 'Wear this'}</button>
+        <button class="card-action${ds.saved ? ' active' : ''}" ${ds.saved ? 'disabled' : ''} onclick="saveTodayLook()">${ds.saved ? '★ saved' : '☆ Save this look'}</button>
+        <button class="card-action" onclick="anotherToday()">Another option</button>
+      </div>
+    </div>`;
+}
+
+// ── Manual slot picker (build your own outfit) ───────────────────────────────
+// Each slot's swap/add opens a dropdown of the user's OWN items for that slot,
+// filtered to the slot's categories and the current season (with a "show all
+// seasons" override). "Let Claude pick" preserves the AI swap. Picking an item
+// just sets the slot — the preference boost happens when the look is saved.
+// Shared by the Today view (ctx 'today') and the Ask result cards (ctx 'ask').
+const SLOT_CATS = {
+  outer: ['Outerwear', 'Tailoring'],
+  top: ['Tops', 'Knitwear'],
+  bottom: ['Pants'],
+  shoes: ['Shoes'],
+  accessory: ['Accessories'],
+};
+function currentAllowedSeasonTags() {
+  const m = new Date().getMonth() + 1; // mirrors server season_for_month()
+  if (m === 12 || m === 1 || m === 2) return ['winter', 'fw', 'all', 'formal'];
+  if (m >= 3 && m <= 5) return ['spring', 'ss', 'shoulder', 'all', 'formal'];
+  if (m >= 6 && m <= 8) return ['summer', 'ss', 'all', 'formal'];
+  return ['fall', 'fw', 'shoulder', 'all', 'formal'];
+}
+function itemInSeason(item, allowed) {
+  const tags = String(item.s || 'all').split(',').map(t => t.trim()).filter(Boolean);
+  if (!tags.length) return true;
+  return tags.some(t => allowed.includes(t));
+}
+function eligibleItemsForSlot(slotKey, allSeasons) {
+  const cats = SLOT_CATS[slotKey] || [];
+  let items = W.filter(w => cats.includes(w.cat));
+  if (!allSeasons) {
+    const allowed = currentAllowedSeasonTags();
+    const inS = items.filter(w => itemInSeason(w, allowed));
+    if (inS.length) items = inS; // never present an empty list — fall back to all
+  }
+  return items.slice().sort((a, b) =>
+    (a.sub || '').localeCompare(b.sub || '') || (a.item || '').localeCompare(b.item || ''));
+}
+
+let pickerOpen = null; // { ctx, turnIdx, cardIdx, slotKey, allSeasons } or null
+let pickerBusy = false; // a "Let Claude pick" AI swap is in flight — freeze picker input
+function pickerMatches(ctx, turnIdx, cardIdx, slotKey) {
+  return !!pickerOpen && pickerOpen.ctx === ctx && pickerOpen.slotKey === slotKey
+    && (ctx !== 'ask' || (pickerOpen.turnIdx === turnIdx && pickerOpen.cardIdx === cardIdx));
+}
+function rerenderFor(ctx) { if (ctx === 'today') renderTodayHero(); else renderThread(); }
+
+function openSlotPicker(ctx, turnIdx, cardIdx, slotKey) {
+  pickerOpen = pickerMatches(ctx, turnIdx, cardIdx, slotKey)
+    ? null : { ctx, turnIdx, cardIdx, slotKey, allSeasons: false };
+  rerenderFor(ctx);
+}
+function togglePickerSeasons() {
+  if (!pickerOpen) return;
+  pickerOpen.allSeasons = !pickerOpen.allSeasons;
+  rerenderFor(pickerOpen.ctx);
+}
+function setSlotItem(ctx, turnIdx, cardIdx, slotKey, itemId) {
+  if (ctx === 'today') {
+    const ds = dayState(); if (!ds.outfit) return;
+    ds.outfit.slots[slotKey] = { id: itemId || null, reason: '' };
+    ds.excluded[slotKey] = []; // a manual choice overrides AI exclusions
+  } else {
+    const card = getCard(turnIdx, cardIdx); if (!card) return;
+    card.slots[slotKey] = { id: itemId || null, reason: '' };
+    getCardState(turnIdx, cardIdx).excluded[slotKey] = [];
+  }
+}
+function pickSlotItem(ctx, turnIdx, cardIdx, slotKey, itemId) {
+  if (pickerBusy) return; // ignore manual picks while an AI swap is resolving
+  setSlotItem(ctx, turnIdx, cardIdx, slotKey, itemId);
+  pickerOpen = null;
+  rerenderFor(ctx);
+}
+async function claudePickSlot(ctx, turnIdx, cardIdx, slotKey, el) {
+  if (pickerBusy) return;
+  pickerBusy = true;
+  pickerOpen = null; // the swap's success re-render won't reopen the dropdown
+  if (el && el.classList) el.classList.add('picker-thinking');
+  const fallback = (typeof document !== 'undefined') ? document.createElement('button') : {};
+  try {
+    if (ctx === 'today') await swapTodaySlot(slotKey, el || fallback);
+    else await swapSlot(turnIdx, cardIdx, slotKey, el || fallback);
+  } finally {
+    // Always re-render: the swap functions skip their own re-render on failure,
+    // which would otherwise leave the (state-closed) panel dangling on screen.
+    pickerBusy = false;
+    rerenderFor(ctx);
+  }
+}
+
+function pickerPanelHtml(ctx, turnIdx, cardIdx, slotKey, currentId) {
+  if (!pickerMatches(ctx, turnIdx, cardIdx, slotKey)) return '';
+  const optional = (slotKey === 'outer' || slotKey === 'accessory');
+  const args = `'${ctx}', ${turnIdx}, ${cardIdx}, '${slotKey}'`;
+  const items = eligibleItemsForSlot(slotKey, pickerOpen.allSeasons);
+  let rows = optional
+    ? `<div class="picker-item${!currentId ? ' selected' : ''}" onclick="pickSlotItem(${args}, '')"><span>— none —</span>${!currentId ? '<span class="picker-check">✓</span>' : ''}</div>`
+    : '';
+  rows += items.map(w =>
+    `<div class="picker-item${w.id === currentId ? ' selected' : ''}" onclick="pickSlotItem(${args}, '${esc(w.id)}')"><span>${esc(w.item)}</span>${w.id === currentId ? '<span class="picker-check">✓</span>' : ''}</div>`
+  ).join('');
+  if (!items.length && !optional) {
+    rows = `<div class="picker-empty">No ${esc(SLOT_LABELS[slotKey].toLowerCase())} pieces tagged for this season — flip “all seasons”.</div>`;
+  }
+  return `<div class="picker-panel">
+    <div class="picker-claude" onclick="claudePickSlot(${args}, this)"><span class="picker-wand">✦</span> Let Claude pick</div>
+    <div class="picker-list">${rows}</div>
+    <div class="picker-toggle" onclick="togglePickerSeasons()">
+      <span>Show all seasons</span>
+      <span class="picker-switch${pickerOpen.allSeasons ? ' on' : ''}"><span class="picker-knob"></span></span>
+    </div>
+  </div>`;
+}
+
+// Save the (possibly self-styled) Today look as a FAVORITE — boosts these
+// pieces in future recommendations without marking them worn (which would
+// briefly hold them back). "Wear this" is the worn+picked path.
+async function saveTodayLook() {
+  const ds = dayState(); const o = ds.outfit;
+  if (!o || ds.saved) return;
+  const items = collectTodayItems();
+  if (!items.length) return;
+  const now = new Date().toISOString();
+  savedOutfits.unshift({
+    id: uid(), title: o.title, vibe: o.vibe, items: items.map(x => x.item),
+    note: o.reason || null, savedAt: now, wore: false,
+  });
+  feedback.unshift({
+    id: uid(), type: 'favorite', occasion: todayOccasionText(), season: '',
+    items: items.map(x => ({ id: x.id, item: x.item })), timestamp: now,
+  });
+  ds.saved = true;
+  insightsStale = true;
+  await saveToServer();
+  renderTodayHero();
+  renderHistory();
+}
+
+async function swapTodaySlot(slotKey, btnEl) {
+  const ds = dayState();
+  const o = ds.outfit;
+  if (!o) return;
+  btnEl.disabled = true;
+  btnEl.classList.add('swapping');
+
+  const currentIds = {};
+  SLOT_ORDER.forEach(k => { currentIds[k] = (o.slots[k] || {}).id || null; });
+  const excluded = ds.excluded[slotKey] || [];
+  const currentId = (o.slots[slotKey] || {}).id;
+  if (currentId && !excluded.includes(currentId)) excluded.push(currentId);
+
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 30000);
+  try {
+    const r = await apiFetch('/api/chat/swap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: todayOccasionText(),
+        slot: slotKey,
+        current: currentIds,
+        exclude: excluded,
+      }),
+      signal: abort.signal,
+    });
+    clearTimeout(timer);
+    const data = await r.json();
+    if (!r.ok || data.error) {
+      alert(data.error || 'Swap failed — try again.');
+      return;
+    }
+    o.slots[slotKey] = { id: data.id || null, reason: data.reason || '' };
+    ds.excluded[slotKey] = excluded;
+    renderTodayHero();
+  } catch (e) {
+    clearTimeout(timer);
+    alert(e.name === 'AbortError' ? 'Swap took too long — try again.' : 'Connection error.');
+  } finally {
+    btnEl.disabled = false;
+    btnEl.classList.remove('swapping');
+  }
+}
+
+function collectTodayItems() {
+  const o = dayState().outfit;
+  if (!o) return [];
+  return SLOT_ORDER.map(k => (o.slots[k] || {}).id)
+    .filter(Boolean)
+    .map(id => W.find(w => w.id === id))
+    .filter(Boolean);
+}
+
+async function wearToday() {
+  const ds = dayState();
+  const o = ds.outfit;
+  if (!o || ds.wore) return;
+  const items = collectTodayItems();
+  if (!items.length) return;
+  const now = new Date().toISOString();
+  savedOutfits.unshift({
+    id: uid(),
+    title: o.title,
+    vibe: o.vibe,
+    items: items.map(x => x.item),
+    note: o.reason || null,
+    savedAt: now,
+    wore_at: now,
+    wore: true,
+  });
+  feedback.unshift({
+    id: uid(), type: 'picked',
+    occasion: todayOccasionText(),
+    season: '',
+    items: items.map(x => ({ id: x.id, item: x.item })),
+    timestamp: now,
+  });
+  ds.wore = true;
+  insightsStale = true; // wear data changed — Insights refreshes on next open
+  await saveToServer();
+  renderTodayHero();
+  renderHistory();
+}
+
+function anotherToday() {
+  const ids = collectTodayItems().map(x => x.id);
+  requestToday(ids);
+}
+
+// ── History strip ────────────────────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('history-container');
+  if (!el) return;
+  const worn = savedOutfits.filter(o => o.wore).slice(0, 10);
+  if (!worn.length) {
+    el.innerHTML = '<div class="history-empty">Nothing logged yet. Tap "wore this" after Ask to start tracking.</div>';
+    return;
+  }
+  el.innerHTML = worn.map(o => {
+    const ts = o.wore_at || o.savedAt;
+    const d = ts ? new Date(ts) : null;
+    const dateStr = d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    const itemsStr = (o.items || []).join(', ');
+    return `<div class="history-row">
+      <div class="history-row-main"><span class="history-row-title">${esc(o.title)}</span> — ${esc(itemsStr)}</div>
+      <div class="history-row-date">${esc(dateStr)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Trips (H4 Drop 3) ────────────────────────────────────────────────────────
+// All plans are generated AND persisted server-side (POST /api/trip/plan writes
+// into wardrobe.json's `trips` array). The client just lists + renders them —
+// reopening a saved plan never re-calls Claude. Every dynamic string is esc()'d.
+let trips = [];
+
+async function loadTrips() {
+  try {
+    const r = await apiFetch('/api/trips');
+    const data = await r.json();
+    trips = (data && Array.isArray(data.trips)) ? data.trips : [];
+  } catch (e) {
+    trips = [];
+  }
+  renderTripBanner();
+}
+
+// Parse 'YYYY-MM-DD' as a LOCAL date (new Date(str) would shift via UTC).
+function parseYMD(s) {
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function tripDateRange(t) {
+  const s = parseYMD(t.start_date), e = parseYMD(t.end_date);
+  if (!s || !e) return `${t.start_date || ''}–${t.end_date || ''}`;
+  const sStr = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+  const eStr = sameMonth ? String(e.getDate()) : e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${sStr}–${eStr}`;
+}
+
+// Most recent trip that hasn't ended yet (trips arrive newest-first).
+function upcomingTrip() {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return trips.find(t => (t.end_date || '') >= todayStr) || null;
+}
+
+function renderTripBanner() {
+  const el = document.getElementById('trip-banner');
+  if (!el) return;
+  const t = upcomingTrip();
+  if (!t) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="trip-banner">
+    <span class="trip-banner-text"><span class="trip-banner-dest">${esc(t.destination)}</span> · ${esc(tripDateRange(t))}</span>
+    <button type="button" class="trip-banner-view" onclick="viewTripPlan('${esc(t.id)}')">view plan</button>
+  </div>`;
+}
+
+function openTripModal() {
+  renderTripForm();
+  document.getElementById('trip-modal').style.display = 'flex';
+}
+
+function closeTripModal() {
+  document.getElementById('trip-modal').style.display = 'none';
+}
+
+// Reopen a persisted plan — straight from memory, no API call.
+function viewTripPlan(id) {
+  const t = trips.find(x => x.id === id);
+  if (!t) return;
+  renderTripResult(t);
+  document.getElementById('trip-modal').style.display = 'flex';
+}
+
+function renderTripForm(prefill = {}) {
+  const box = document.getElementById('trip-modal-box');
+  box.innerHTML = `
+    <h2>Plan a trip</h2>
+    <div class="form-row">
+      <label>Destination</label>
+      <input type="text" id="trip-dest" maxlength="80" placeholder="e.g. Stockholm" value="${esc(prefill.destination || '')}">
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>From</label><input type="date" id="trip-start" value="${esc(prefill.start_date || '')}"></div>
+      <div class="form-row"><label>To</label><input type="date" id="trip-end" value="${esc(prefill.end_date || '')}"></div>
+    </div>
+    <div class="form-row">
+      <label>Bag</label>
+      <div class="btn-group" id="trip-bag-group">
+        <button type="button" class="btn-opt${prefill.bag === 'checked' ? '' : ' active'}" data-value="carry-on" onclick="selectOpt(this,'trip-bag-group')">Carry-on</button>
+        <button type="button" class="btn-opt${prefill.bag === 'checked' ? ' active' : ''}" data-value="checked" onclick="selectOpt(this,'trip-bag-group')">Checked</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea id="trip-notes" rows="2" maxlength="300" placeholder="Wedding Saturday, business dinner Monday…">${esc(prefill.notes || '')}</textarea>
+    </div>
+    <div class="trip-form-error" id="trip-form-error">${esc(prefill.error || '')}</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeTripModal()">Cancel</button>
+      <button class="btn-save" id="trip-plan-btn" onclick="submitTripPlan()">Plan my packing</button>
+    </div>`;
+  document.getElementById('trip-dest').focus();
+}
+
+async function submitTripPlan() {
+  const destination = document.getElementById('trip-dest').value.trim();
+  const start_date = document.getElementById('trip-start').value;
+  const end_date = document.getElementById('trip-end').value;
+  const bag = getOpt('trip-bag-group') || 'carry-on';
+  const notes = document.getElementById('trip-notes').value.trim();
+  const errEl = document.getElementById('trip-form-error');
+
+  // Client-side validation mirrors the server's rules.
+  let err = null;
+  if (!destination) err = 'Where to? Destination is required.';
+  else if (!start_date || !end_date) err = 'Pick both travel dates.';
+  else if (end_date < start_date) err = "Return date can't be before departure.";
+  else {
+    const s = parseYMD(start_date), e = parseYMD(end_date);
+    if (s && e && (e - s) / 86400000 + 1 > 14) err = 'Trips up to 14 days — split longer ones.';
+  }
+  if (err) { errEl.textContent = err; return; }
+
+  const box = document.getElementById('trip-modal-box');
+  box.innerHTML = `
+    <h2>Plan a trip</h2>
+    <div class="trip-loading"><span class="ask-thinking">Reading the forecast, packing your bag</span></div>`;
+
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 90000);
+  try {
+    const r = await apiFetch('/api/trip/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ destination, start_date, end_date, bag, notes }),
+      signal: abort.signal,
+    });
+    clearTimeout(timer);
+    const data = await r.json();
+    if (!r.ok || data.error || data.ok === false) {
+      throw new Error(data.error || 'Could not plan the trip — try again.');
+    }
+    trips.unshift(data);   // already persisted server-side
+    renderTripBanner();
+    renderTripResult(data);
+  } catch (e) {
+    clearTimeout(timer);
+    const msg = e.name === 'AbortError'
+      ? 'Took too long — try again.'
+      : (e.message || 'Connection error — is the server running?');
+    renderTripForm({ destination, start_date, end_date, bag, notes, error: msg });
+  }
+}
+
+function renderTripResult(t) {
+  const box = document.getElementById('trip-modal-box');
+  const plan = t.plan || {};
+  const itemName = id => { const w = W.find(x => x.id === id); return w ? w.item : null; };
+
+  const fc = Array.isArray(t.forecast) ? t.forecast : [];
+  const fcHtml = fc.length ? `<div class="trip-forecast">${fc.map(f => {
+    const d = parseYMD(f.date);
+    const dStr = d ? d.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }) : (f.date || '');
+    const precip = (Number(f.precip_prob) || 0) > 15 ? `${Number(f.precip_prob)}% rain` : '';
+    return `<div class="trip-fc-cell">
+      <div class="trip-fc-date">${esc(dStr)}</div>
+      <div class="trip-fc-temp">${Math.round(f.hi)}°<span> / ${Math.round(f.lo)}°</span></div>
+      <div class="trip-fc-precip">${esc(precip)}</div>
+    </div>`;
+  }).join('')}</div>` : '';
+
+  const capsule = plan.capsule || {};
+  const capsuleHtml = Object.keys(capsule).map(cat => `
+    <div class="trip-cap-group">
+      <div class="trip-cap-cat">${esc(cat)}</div>
+      ${capsule[cat].map(id => `<div class="trip-cap-item">${esc(itemName(id) || id)}</div>`).join('')}
+    </div>`).join('');
+
+  const daysHtml = (plan.days || []).map(d => {
+    const s = d.slots || {};
+    const main = ['outer', 'top', 'bottom', 'shoes'].map(k => s[k] && itemName(s[k])).filter(Boolean).join(' · ');
+    const acc = s.accessory && itemName(s.accessory);
+    return `<div class="trip-day">
+      <div class="trip-day-head">
+        <span class="trip-day-label">${esc(d.label || d.date)}</span>
+        ${d.plan ? `<span class="trip-day-plan">${esc(d.plan)}</span>` : ''}
+      </div>
+      <div class="trip-day-slots">${esc(main)}${acc ? ` <span class="trip-day-acc">+${esc(acc)}</span>` : ''}</div>
+    </div>`;
+  }).join('');
+
+  const extras = plan.extras || [];
+  box.innerHTML = `
+    <div class="hero-eyebrow">${esc(plan.title || 'Trip plan')}</div>
+    <h2 style="margin-bottom:4px">${esc(t.destination)}${t.country ? `, ${esc(t.country)}` : ''}</h2>
+    <div class="trip-result-meta">
+      <span>${esc(tripDateRange(t))}</span>
+      <span class="bag-chip">${esc(t.bag)}</span>
+      ${t.weather_mode === 'seasonal' ? '<span class="trip-seasonal-flag">seasonal estimate</span>' : ''}
+    </div>
+    ${plan.weather_note ? `<div class="hero-reason">${esc(plan.weather_note)}</div>` : ''}
+    ${fcHtml}
+    <div class="section-label" id="trip-capsule-count">Capsule — ${Number(plan.piece_count) || 0} pieces · ${esc(t.bag)}</div>
+    ${capsuleHtml}
+    <div class="section-label">Day by day</div>
+    ${daysHtml}
+    ${plan.rewear_note ? `<div class="trip-rewear">${esc(plan.rewear_note)}</div>` : ''}
+    ${extras.length ? `<div class="section-label">Don't forget</div>
+    <div class="trip-extras">${extras.map(x => `<label class="trip-extra"><input type="checkbox"> <span>${esc(x)}</span></label>`).join('')}</div>` : ''}
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn-cancel" style="color:var(--color-danger,#b3261e)" onclick="deleteTrip('${esc(t.id)}')">Delete trip</button>
+      <button class="btn-save" onclick="closeTripModal()">Done</button>
+    </div>`;
+}
+
+async function deleteTrip(id) {
+  const t = trips.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`Delete the ${t.destination} trip and its packing plan?`)) return;
+  try {
+    const r = await apiFetch('/api/trips/' + encodeURIComponent(id), { method: 'DELETE' });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || data.error) { alert(data.error || 'Delete failed — try again.'); return; }
+    trips = Array.isArray(data.trips) ? data.trips : trips.filter(x => x.id !== id);
+    renderTripBanner();
+    closeTripModal();
+  } catch (e) {
+    alert('Connection error — trip not deleted.');
+  }
+}
+
+// ── Insights tab ─────────────────────────────────────────────────────────────
+// GET /api/insights is pure server-side computation over wardrobe.json — cheap,
+// no LLM. Cached per page load; marked stale whenever a wear is logged.
+let insightsData = null;
+let insightsStale = true;
+let insightsLoading = false;
+
+async function loadInsights() {
+  if (insightsLoading || (insightsData && !insightsStale)) {
+    if (insightsData) renderInsights();
+    return;
+  }
+  insightsLoading = true;
+  const el = document.getElementById('insights-body');
+  if (el && !insightsData) el.innerHTML = '<div class="insights-state">Reading your closet…</div>';
+  try {
+    const r = await apiFetch('/api/insights');
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || 'Could not load insights.');
+    insightsData = data;
+    insightsStale = false;
+    renderInsights();
+  } catch (e) {
+    if (el && !insightsData) {
+      el.innerHTML = `<div class="insights-state">${esc(e.message || 'Could not load insights — is the server running?')}</div>`;
+    }
+  } finally {
+    insightsLoading = false;
+  }
+}
+
+// Relative date for wear timestamps — "today", "3d ago", "3w ago", "2mo ago".
+function relTime(iso) {
+  if (!iso) return '';
+  const then = new Date(iso);
+  if (isNaN(then)) return '';
+  const days = Math.floor((Date.now() - then.getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 14) return `${days}d ago`;
+  if (days < 61) return `${Math.round(days / 7)}w ago`;
+  if (days < 365) return `${Math.round(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
+function renderInsights() {
+  const el = document.getElementById('insights-body');
+  const d = insightsData;
+  if (!el || !d) return;
+  const t = d.totals || {};
+
+  if (!t.wears_logged) {
+    el.innerHTML = `
+      <div class="insights-empty">
+        <div class="insights-empty-title">Your closet has a story.</div>
+        <div class="insights-empty-copy">Log outfits with &ldquo;Wear this&rdquo; on the Today tab — or &ldquo;wore this&rdquo; in Ask — and your most-worn pieces, neglected gems, and closet utilization show up here.</div>
+      </div>`;
+    return;
+  }
+
+  const statsHtml = `
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num">${Number(t.utilization_90d_pct) || 0}%</div><div class="stat-label">90-day utilization</div></div>
+      <div class="stat"><div class="stat-num">${Number(t.wears_logged) || 0}</div><div class="stat-label">Wears logged</div></div>
+      <div class="stat"><div class="stat-num">${Number(t.never_worn_in_season) || 0}</div><div class="stat-label">Never worn this season</div></div>
+    </div>`;
+
+  const mostWorn = d.most_worn || [];
+  const maxCount = Math.max(1, ...mostWorn.map(m => Number(m.count) || 0));
+  const mostWornHtml = mostWorn.length ? `
+    <div class="insights-section" id="insights-most-worn">
+      <div class="section-label">Most worn</div>
+      ${mostWorn.map((m, i) => `
+        <div class="mw-row">
+          <span class="mw-rank">${i + 1}</span>
+          <div class="mw-body">
+            <div class="mw-name">${esc(m.item)}</div>
+            <div class="mw-meta">${esc(m.cat)}${m.last_worn ? ` · ${esc(relTime(m.last_worn))}` : ''}</div>
+            <div class="mw-bar"><span style="width:${Math.round(100 * (Number(m.count) || 0) / maxCount)}%"></span></div>
+          </div>
+          <span class="mw-count">${Number(m.count) || 0}×</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  const neglected = d.neglected || [];
+  const shadowsHtml = neglected.length ? `
+    <div class="insights-section" id="insights-shadows">
+      <div class="section-label">In the shadows</div>
+      ${neglected.map((n, i) => `
+        <div class="shadow-row">
+          <div class="shadow-main">
+            <div class="shadow-name">${esc(n.item)}</div>
+            <div class="shadow-meta">${esc([n.cat, n.sub, n.color].filter(Boolean).join(' · '))}${n.last_worn ? ` · last worn ${esc(relTime(n.last_worn))}` : ' · never worn'}</div>
+          </div>
+          <button class="card-action style-this" onclick="styleThisFromInsights(${i})">Style this →</button>
+        </div>`).join('')}
+    </div>` : '';
+
+  const cats = d.categories || {};
+  const catNames = Object.keys(cats);
+  const categoriesHtml = catNames.length ? `
+    <div class="insights-section" id="insights-categories">
+      <div class="section-label">Category utilization · 90 days</div>
+      ${catNames.map(name => {
+        const c = cats[name] || {};
+        return `
+        <div class="cat-bar-row">
+          <span class="cat-bar-label">${esc(name)}</span>
+          <div class="cat-bar"><span style="width:${Number(c.pct) || 0}%"></span></div>
+          <span class="cat-bar-count">${Number(c.worn_90d) || 0}/${Number(c.total) || 0}</span>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  const recent = d.recent || [];
+  const recentHtml = recent.length ? `
+    <div class="insights-section" id="insights-recent">
+      <div class="section-label">Recently worn</div>
+      ${recent.map(r => `
+        <div class="history-row">
+          <div class="history-row-main"><span class="history-row-title">${esc(r.title || 'Outfit')}</span></div>
+          <div class="history-row-date">${esc(relTime(r.wore_at))}</div>
+        </div>`).join('')}
+    </div>` : '';
+
+  el.innerHTML = statsHtml + mostWornHtml + shadowsHtml + categoriesHtml + recentHtml;
+}
+
+// "Style this →" — hand the neglected item to the existing Ask flow.
+function styleThisFromInsights(idx) {
+  const n = ((insightsData || {}).neglected || [])[idx];
+  if (!n) return;
+  const askTab = [...document.querySelectorAll('.tab')].find(b => b.textContent.trim() === 'Ask');
+  if (askTab) showTab('ask', askTab);
+  const input = document.getElementById('ask-input');
+  if (!input) return;
+  input.value = `Build me an outfit around my ${n.item} for this week`;
+  askClaude(); // reuse the existing send path — no duplicated logic
+}
+
+// ── Theme ───────────────────────────────────────────────────────────────────
+// Keep the browser/PWA chrome color in sync with the app's manual theme toggle.
+// Both metas get the same value so it wins regardless of the OS color scheme.
+function applyThemeColor(theme) {
+  const color = theme === 'dark' ? '#18181b' : '#fafaf8';
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute('content', color));
+}
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀' : '☾';
+  applyThemeColor(next);
+}
+(function initTheme() {
+  const saved = localStorage.getItem('theme');
+  const prefer = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const theme = saved || prefer;
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.getElementById('theme-toggle').textContent = '☀';
+  }
+  applyThemeColor(theme);
+})();
+
+// ── Service worker (Drop 4: PWA) ────────────────────────────────────────────
+// Feature-detected and non-blocking; failures are silent — the app works
+// identically without a SW, it just isn't installable/offline-capable.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {}); // relative: works at '/' locally and under the cloud storage path
+  });
+}
+
+// Expose state for E2E tests — harmless in production, cheap for Playwright.
+window.W = W;
+window.savedOutfits = savedOutfits;
+window.feedback = feedback;
+window.settings = settings;
+window.setChatThread = (turns) => {
+  chatThread = turns || [];
+  cardState = {};
+};
+window.getChatThread = () => chatThread;
+window.renderHistory = renderHistory;
+window.renderThread = renderThread;
+window.getTodayState = () => todayState;
+
+// ── Init ────────────────────────────────────────────────────────────────────
+// Cloud mode boots only after sign-in (the gate calls bootApp on success);
+// local mode boots immediately, with the cloud session restored quietly for
+// the Settings migration affordances.
+async function bootApp() {
+  await load();
+  window.W = W;
+  window.savedOutfits = savedOutfits;
+  window.feedback = feedback;
+  window.settings = settings;
+  initToday();
+}
+(async () => {
+  const signedIn = await initCloud();
+  if (IS_CLOUD && !signedIn) { showAuthGate('gate'); return; }
+  bootApp();
+})();
+</script>
+</body>
+</html>
