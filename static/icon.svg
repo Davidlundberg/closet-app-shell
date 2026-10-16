@@ -1,0 +1,15 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- David's Closet app icon — warm off-white field, elegant line hanger.
+       Hook carries the teal accent; body is near-black ink.
+       Structure matters: tools/make-icons.js rewrites the #bg rx and wraps
+       #glyph in a scale transform to cut the square + maskable variants. -->
+  <rect id="bg" x="0" y="0" width="512" height="512" rx="116" fill="#fafaf8"/>
+  <g id="glyph" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- hook: neck stem rising into an open curl, teal accent -->
+    <path d="M256 232 V190 A29 29 0 0 0 198 190 V204"
+          stroke="#0d9488" stroke-width="19"/>
+    <!-- shoulders + bar: shallow closed triangle, near-black ink -->
+    <path d="M256 232 L410 342 L102 342 Z"
+          stroke="#18181b" stroke-width="19"/>
+  </g>
+</svg>
